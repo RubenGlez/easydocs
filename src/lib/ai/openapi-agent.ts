@@ -19,42 +19,43 @@ export async function processWithAI(
   docData: DocumentationData,
   previousEndpoint?: Endpoint
 ) {
-  const isPaginated = Array.isArray(docData.response.data);
+  const { method, path, params, body, response, status, headers } = docData;
+
+  const isPaginated = Array.isArray(response.data);
   const cleanedResponse = isPaginated
     ? {
-        ...docData.response,
-        data: (docData.response as { data: unknown[] }).data.slice(0, 1),
+        ...response,
+        data: (response as { data: unknown[] }).data.slice(0, 1),
       }
-    : docData.response;
+    : response;
 
   try {
     const { object } = await generateObject({
       model: openai("gpt-4-turbo"),
       system: [
-        "You are an OpenAPI expert. Generate/update OpenAPI 3.0 spec JSON strictly following OperationSchema.",
-        "Critical Requirements:",
-        "- responses field is REQUIRED and must contain at least one status code",
-        "- Include content-type based on response headers when available",
-        "- response schema must match the example response structure",
-        "- Maintain previous schema structure when updating",
-        "- Validate output against schema before responding",
+        "You are an OpenAPI and Swagger expert. Generate OpenAPI 3.0 spec JSON using the given parameters.",
+        "Guidelines:",
+        "- If there is no current spec, generate a new spec",
+        "- If there is a current spec, use it as a base to generate the new spec",
+        "- The 'responses' field is REQUIRED and must include the example status code",
+        "- If using requestBody, it MUST include a 'content' property with media type",
       ].join("\n"),
       schema: OperationSchema,
       prompt: [
-        `Generate OpenAPI operation for: ${docData.method} ${docData.path}`,
-        `Required Sections: parameters, requestBody (if applicable), responses`,
-        `Params: ${JSON.stringify(docData.params)}`,
-        `Body: ${docData.body ? JSON.stringify(docData.body) : "None"}`,
-        `Example Response (${docData.status}): ${JSON.stringify(
-          cleanedResponse,
-          null,
-          2
-        )}`,
-        `Response Headers: ${JSON.stringify(docData.headers)}`,
+        `These are the parameters you can use:`,
+        `- Method: ${method}`,
+        `- Path: ${path}`,
+        `- Query Params: ${JSON.stringify(params)}`,
+        `- Request Body: ${body ? JSON.stringify(body) : ""}`,
+        `- Example Response (${status}): ${JSON.stringify(cleanedResponse)}`,
+        `- MUST include this status code (${status}) in the 'responses' field`,
+        `- Response Headers: ${JSON.stringify(headers)}`,
+        `- Required: Include 'responses' with status ${status} and description`,
+        `- Required for POST/PUT: requestBody.content if body exists`,
         previousEndpoint
-          ? `Current Spec: ${JSON.stringify(previousEndpoint)}`
+          ? `- Current Spec: ${JSON.stringify(previousEndpoint)}`
           : "",
-      ].join("\n\n"),
+      ].join("\n"),
     });
 
     return object;

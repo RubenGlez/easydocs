@@ -16,17 +16,20 @@ async function processRealApiRequest(
   req: NextRequest,
   method: HttpMethod
 ) {
+  console.log(`[AutoDoc] Forwarding request to: ${realApiUrl}`);
+  const body = method !== "GET" ? await req.text() : undefined;
+
   const realResponse = await fetch(realApiUrl, {
     method,
     headers: req.headers,
-    body: method !== "GET" ? await req.text() : undefined,
+    body: body,
   });
 
   const docData: DocumentationData = {
     method,
     path: new URL(realApiUrl).pathname,
     params: Object.fromEntries(new URL(realApiUrl).searchParams.entries()),
-    body: method !== "GET" ? await req.json() : null,
+    body: body ? JSON.parse(body) : null,
     response: await realResponse.json(),
     status: realResponse.status,
     headers: Object.fromEntries(realResponse.headers.entries()),
@@ -93,13 +96,9 @@ async function handleDocumentation(req: NextRequest, method: HttpMethod) {
       );
     }
 
-    // Decode the endpoint URL to handle double-encoding issues
     const targetEndpoint = decodeURIComponent(encodedEndpoint);
-
-    console.log(`[AutoDoc] Forwarding request to: ${targetEndpoint}`);
     const docData = await processRealApiRequest(targetEndpoint, req, method);
 
-    console.log(`[AutoDoc] Starting database operation`);
     const spec = await handleDatabaseOperation(docData);
 
     return NextResponse.json({

@@ -7,8 +7,6 @@ export default async function HomePage() {
     orderBy: (endpoints, { desc }) => [desc(endpoints.createdAt)],
   });
 
-  console.log("Raw endpoints:", allEndpoints);
-
   const fullSpec = {
     openapi: "3.0.3",
     info: { title: "My API", version: "1.0.0" },
@@ -24,8 +22,6 @@ export default async function HomePage() {
     components: {},
     tags: [],
   };
-
-  console.log("fullSpec", JSON.stringify(fullSpec, null, 2));
 
   return <SwaggerUI spec={fullSpec} />;
 }
