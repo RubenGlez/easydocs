@@ -37,7 +37,6 @@ async function processRealApiRequest(
 }
 
 async function handleDatabaseOperation(docData: DocumentationData) {
-  // Check if specification exists
   const [existingSpec] = await db
     .select()
     .from(specifications)
@@ -48,7 +47,6 @@ async function handleDatabaseOperation(docData: DocumentationData) {
       )
     );
 
-  // Process with AI
   const document = await processWithAI(docData, existingSpec);
 
   if (existingSpec) {
@@ -81,7 +79,6 @@ async function handleDocumentation(req: NextRequest, method: HttpMethod) {
   const realEndpoint = env.REAL_API_ENDPOINT;
 
   try {
-    // Parse the incoming URL and extract path and search params
     const url = new URL(req.url);
     const path = url.pathname.replace("/api/autodoc", "");
     const realApiUrl = `${realEndpoint}${path}${url.search}`;
