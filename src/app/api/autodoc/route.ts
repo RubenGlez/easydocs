@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
-import { specifications } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import {
   DocumentationData,
   HttpMethod,
   processWithAI,
 } from "@/lib/ai/openapi-agent";
+import { endpoints } from "@/db/schema";
 
 // Real API url: https://dev-supervisor.iseazyengage.com/api/v1/project-users?generatedAt=2025-01-26T23%3A00%3A00.000Z&order=desc&limit=50&page=1&lang=es&projectUid=0193d9ce-ca45-73bb-be92-25c0917f6c80
 // Proxy url: https://localhost:3000/api/autodoc?endpoint=<real-api-url>
@@ -36,43 +36,44 @@ async function processRealApiRequest(
 }
 
 async function handleDatabaseOperation(docData: DocumentationData) {
-  const [existingSpec] = await db
+  const [existingEndpoint] = await db
     .select()
-    .from(specifications)
+    .from(endpoints)
     .where(
       and(
-        eq(specifications.endpoint, docData.path),
-        eq(specifications.method, docData.method)
+        eq(endpoints.path, docData.path),
+        eq(endpoints.method, docData.method)
       )
     );
 
-  const document = await processWithAI(docData, existingSpec);
+  console.log(`[AutoDoc] Processing with AI`);
+  const document = await processWithAI(docData, existingEndpoint);
 
-  if (existingSpec) {
-    console.log("[AutoDoc] Updating existing specification");
-    const [updatedSpec] = await db
-      .update(specifications)
-      .set({ document })
-      .where(eq(specifications.id, existingSpec.id))
+  if (existingEndpoint) {
+    console.log("[AutoDoc] Updating existing endpoint");
+    const [updatedEndpoint] = await db
+      .update(endpoints)
+      .set({ spec: document })
+      .where(eq(endpoints.id, existingEndpoint.id))
       .returning();
-    return updatedSpec;
+    return updatedEndpoint;
   }
 
-  console.log("[AutoDoc] Creating new specification");
-  const [newSpec] = await db
-    .insert(specifications)
+  console.log("[AutoDoc] Creating new endpoint");
+  const [newEndpoint] = await db
+    .insert(endpoints)
     .values({
-      endpoint: docData.path,
+      path: docData.path,
       method: docData.method.toUpperCase() as
         | "GET"
         | "POST"
         | "PUT"
         | "PATCH"
         | "DELETE",
-      document,
+      spec: document,
     })
     .returning();
-  return newSpec;
+  return newEndpoint;
 }
 
 async function handleDocumentation(req: NextRequest, method: HttpMethod) {
@@ -103,8 +104,8 @@ async function handleDocumentation(req: NextRequest, method: HttpMethod) {
 
     return NextResponse.json({
       status: "documented",
-      endpoint: spec.endpoint,
-      spec: spec.document,
+      endpoint: spec.path,
+      spec: spec.spec,
     });
   } catch (error) {
     console.error(`[AutoDoc] Error:`, error);

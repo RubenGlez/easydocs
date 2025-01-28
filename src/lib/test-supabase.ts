@@ -3,7 +3,7 @@ import { db } from "@/db/drizzle";
 export async function testSupabaseConnection() {
   try {
     // We'll try to fetch a single row from the specifications table
-    const testQuery = await db.query.specifications.findFirst();
+    const testQuery = await db.query.endpoints.findFirst();
 
     if (testQuery) {
       console.log("✅ Supabase connection successful");

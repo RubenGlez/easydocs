@@ -1,47 +1,31 @@
 import { db } from "@/db/drizzle";
 import SwaggerUI from "swagger-ui-react";
 import "swagger-ui-react/swagger-ui.css";
-import {
-  generateOpenAPIDoc,
-  OpenAPIDocument,
-  ApiEndpointDetails,
-} from "@/lib/openapi/generate";
 
 export default async function HomePage() {
-  const allSpecs = await db.query.specifications.findMany({
-    orderBy: (specs, { desc }) => [desc(specs.createdAt)],
+  const allEndpoints = await db.query.endpoints.findMany({
+    orderBy: (endpoints, { desc }) => [desc(endpoints.createdAt)],
   });
 
-  const fullSpec = allSpecs.reduce<OpenAPIDocument>(
-    (acc, spec) => {
-      const document = spec.document as ApiEndpointDetails;
+  console.log("Raw endpoints:", allEndpoints);
 
-      const singleSpec = generateOpenAPIDoc({
-        path: spec.endpoint,
-        method: spec.method.toLowerCase() as
-          | "get"
-          | "post"
-          | "put"
-          | "delete"
-          | "patch",
-        details: document,
-      });
+  const fullSpec = {
+    openapi: "3.0.3",
+    info: { title: "My API", version: "1.0.0" },
+    paths: allEndpoints?.reduce(
+      (acc, endpoint) => ({
+        ...acc,
+        [endpoint.path]: {
+          [endpoint.method.toLowerCase()]: endpoint.spec,
+        },
+      }),
+      {}
+    ),
+    components: {},
+    tags: [],
+  };
 
-      // Merge the paths from singleSpec into acc
-      acc.paths = {
-        ...acc.paths,
-        ...singleSpec.paths,
-      };
-
-      return acc;
-    },
-    {
-      openapi: "3.0.3",
-      info: { title: "API Documentation", version: "1.0" },
-      tags: [],
-      paths: {},
-    }
-  );
+  console.log("fullSpec", JSON.stringify(fullSpec, null, 2));
 
   return <SwaggerUI spec={fullSpec} />;
 }

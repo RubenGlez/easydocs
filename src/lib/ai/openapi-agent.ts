@@ -1,19 +1,14 @@
-import { Specification } from "@/db/schema";
+import { Endpoint } from "@/db/schema";
 import { generateObject } from "ai";
 import { openai } from "@ai-sdk/openai";
-import { z } from "zod";
+import { OperationSchema } from "./swagger-schema";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
-
-interface RequestParams {
-  query?: Record<string, string>;
-  path?: Record<string, string>;
-}
 
 export interface DocumentationData {
   method: HttpMethod;
   path: string;
-  params: RequestParams;
+  params: Record<string, string>;
   body: Record<string, unknown> | null;
   response: Record<string, unknown>;
   status: number;
@@ -22,10 +17,9 @@ export interface DocumentationData {
 
 export async function processWithAI(
   docData: DocumentationData,
-  previousSpecification?: Specification
+  previousEndpoint?: Endpoint
 ) {
   const isPaginated = Array.isArray(docData.response.data);
-
   const cleanedResponse = isPaginated
     ? {
         ...docData.response,
@@ -37,50 +31,30 @@ export async function processWithAI(
     const { object } = await generateObject({
       model: openai("gpt-4-turbo"),
       system: [
-        "You are an OpenAPI specification expert. Generate or update an OpenAPI 3.0 specification in JSON format.",
-        "When a previous specification is provided:",
-        "1. Maintain consistency with existing schemas and naming conventions",
-        "2. Preserve any additional properties or metadata present in the previous specification",
-        "3. Only update or enhance the specification based on new information",
-        "4. Keep existing descriptions if they are more detailed than what you would generate",
-        "\nThe specification must include:",
-        "- request_schema: JSON Schema for the request body, with detailed property descriptions",
-        "- response_schema: JSON Schema for the response body, with detailed property descriptions",
-        "- examples: { request: realistic example, response: realistic example }",
-        "- parameters: { in: 'query'|'path', name: string, schema: JSON Schema, description: string }[]",
-        "- description: A comprehensive description of the endpoint including its purpose and usage",
+        "You are an OpenAPI expert. Generate/update OpenAPI 3.0 spec JSON strictly following OperationSchema.",
+        "Critical Requirements:",
+        "- responses field is REQUIRED and must contain at least one status code",
+        "- Include content-type based on response headers when available",
+        "- response schema must match the example response structure",
+        "- Maintain previous schema structure when updating",
+        "- Validate output against schema before responding",
       ].join("\n"),
-      schema: z.object({
-        request_schema: z.any(),
-        response_schema: z.any(),
-        examples: z.object({
-          request: z.any(),
-          response: z.any(),
-        }),
-        parameters: z.array(
-          z.object({
-            in: z.enum(["query", "path"]),
-            name: z.string(),
-            schema: z.any(),
-            description: z.string(),
-          })
-        ),
-        description: z.string(),
-      }),
+      schema: OperationSchema,
       prompt: [
-        "Generate an OpenAPI specification for the following endpoint:",
-        `- Method: ${docData.method}`,
-        `- Path: ${docData.path}`,
-        `- Parameters: ${docData.params}`,
-        `- Body: ${docData.body}`,
-        `- Response: ${cleanedResponse}`,
-        `- Status: ${docData.status}`,
-        `- Headers: ${docData.headers}`,
-        previousSpecification
-          ? "\nPrevious specification: (maintain consistency with this):"
+        `Generate OpenAPI operation for: ${docData.method} ${docData.path}`,
+        `Required Sections: parameters, requestBody (if applicable), responses`,
+        `Params: ${JSON.stringify(docData.params)}`,
+        `Body: ${docData.body ? JSON.stringify(docData.body) : "None"}`,
+        `Example Response (${docData.status}): ${JSON.stringify(
+          cleanedResponse,
+          null,
+          2
+        )}`,
+        `Response Headers: ${JSON.stringify(docData.headers)}`,
+        previousEndpoint
+          ? `Current Spec: ${JSON.stringify(previousEndpoint)}`
           : "",
-        previousSpecification ? JSON.stringify(previousSpecification) : "",
-      ].join("\n"),
+      ].join("\n\n"),
     });
 
     return object;
