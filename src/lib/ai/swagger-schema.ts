@@ -106,21 +106,6 @@ const ParameterSchema = z
     path: ["content"],
   });
 
-// Request Body Object
-const RequestBodySchema = z.object({
-  description: z
-    .string()
-    .optional()
-    .describe("A brief description of the request body"),
-  content: z
-    .record(MediaTypeSchema)
-    .describe("The content of the request body"),
-  required: z
-    .boolean()
-    .default(false)
-    .describe("Determines if the request body is required"),
-});
-
 // Response Object
 const ResponseSchema = z.object({
   description: z.string().describe("A description of the response"),
@@ -157,13 +142,12 @@ export const OperationSchema = z.object({
     .array(ParameterSchema)
     .optional()
     .describe("Parameters expected by the operation"),
-  requestBody: RequestBodySchema.optional()
-    .refine((body) => !body || body.content, {
-      message: "requestBody must include content if present",
+  requestBody: z
+    .object({
+      content: z.record(z.any()),
     })
-    .describe(
-      "The request body applicable for this operation (Only required for POST, PUT, PATCH, DELETE)"
-    ),
+    .nullable()
+    .optional(),
   responses: z
     .record(ResponseSchema)
     .default({})
