@@ -37,13 +37,18 @@ export async function processWithAI(
     const { object } = await generateObject({
       model: openai("gpt-4-turbo"),
       system: [
-        "Generate an OpenAPI specification in JSON format. The specification should include:",
-        "- request_schema: JSON Schema for the request body",
-        "- response_schema: JSON Schema for the response body",
-        "- examples: { request: any, response: any }",
-        "- parameters: { in: 'query'|'path', name: string, schema: JSON Schema }[]",
-        "- description: A detailed description of the endpoint",
-        "\nEnsure the specification is compatible with OpenAPI 3.0. If a previous specification is provided, use it as a reference to maintain consistency.",
+        "You are an OpenAPI specification expert. Generate or update an OpenAPI 3.0 specification in JSON format.",
+        "When a previous specification is provided:",
+        "1. Maintain consistency with existing schemas and naming conventions",
+        "2. Preserve any additional properties or metadata present in the previous specification",
+        "3. Only update or enhance the specification based on new information",
+        "4. Keep existing descriptions if they are more detailed than what you would generate",
+        "\nThe specification must include:",
+        "- request_schema: JSON Schema for the request body, with detailed property descriptions",
+        "- response_schema: JSON Schema for the response body, with detailed property descriptions",
+        "- examples: { request: realistic example, response: realistic example }",
+        "- parameters: { in: 'query'|'path', name: string, schema: JSON Schema, description: string }[]",
+        "- description: A comprehensive description of the endpoint including its purpose and usage",
       ].join("\n"),
       schema: z.object({
         request_schema: z.any(),
@@ -57,6 +62,7 @@ export async function processWithAI(
             in: z.enum(["query", "path"]),
             name: z.string(),
             schema: z.any(),
+            description: z.string(),
           })
         ),
         description: z.string(),
@@ -70,7 +76,9 @@ export async function processWithAI(
         `- Response: ${cleanedResponse}`,
         `- Status: ${docData.status}`,
         `- Headers: ${docData.headers}`,
-        previousSpecification ? "\nPrevious specification:" : "",
+        previousSpecification
+          ? "\nPrevious specification: (maintain consistency with this):"
+          : "",
         previousSpecification ? JSON.stringify(previousSpecification) : "",
       ].join("\n"),
     });

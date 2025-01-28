@@ -7,10 +7,9 @@ import {
   HttpMethod,
   processWithAI,
 } from "@/lib/ai/openapi-agent";
-import { env } from "@/env";
 
-// Original request:  https://dev-supervisor.iseazyengage.com/api/v1/project-users?generatedAt=2025-01-26T23%3A00%3A00.000Z&order=desc&limit=50&page=1&lang=es&projectUid=0193d9ce-ca45-73bb-be92-25c0917f6c80
-// New request:  https://localhost:3000/autodoc/api/v1/project-users?generatedAt=2025-01-26T23%3A00%3A00.000Z&order=desc&limit=50&page=1&lang=es&projectUid=0193d9ce-ca45-73bb-be92-25c0917f6c80
+// Real API url: https://dev-supervisor.iseazyengage.com/api/v1/project-users?generatedAt=2025-01-26T23%3A00%3A00.000Z&order=desc&limit=50&page=1&lang=es&projectUid=0193d9ce-ca45-73bb-be92-25c0917f6c80
+// Proxy url: https://localhost:3000/api/autodoc?endpoint=<real-api-url>
 
 async function processRealApiRequest(
   realApiUrl: string,
@@ -50,6 +49,7 @@ async function handleDatabaseOperation(docData: DocumentationData) {
   const document = await processWithAI(docData, existingSpec);
 
   if (existingSpec) {
+    console.log("[AutoDoc] Updating existing specification");
     const [updatedSpec] = await db
       .update(specifications)
       .set({ document })
@@ -58,6 +58,7 @@ async function handleDatabaseOperation(docData: DocumentationData) {
     return updatedSpec;
   }
 
+  console.log("[AutoDoc] Creating new specification");
   const [newSpec] = await db
     .insert(specifications)
     .values({
@@ -76,15 +77,26 @@ async function handleDatabaseOperation(docData: DocumentationData) {
 
 async function handleDocumentation(req: NextRequest, method: HttpMethod) {
   console.log(`[AutoDoc] Starting documentation process for ${method} request`);
-  const realEndpoint = env.REAL_API_ENDPOINT;
 
   try {
     const url = new URL(req.url);
-    const path = url.pathname.replace("/api/autodoc", "");
-    const realApiUrl = `${realEndpoint}${path}${url.search}`;
+    const encodedEndpoint = url.search.replace("?endpoint=", "");
 
-    console.log(`[AutoDoc] Forwarding request to: ${realApiUrl}`);
-    const docData = await processRealApiRequest(realApiUrl, req, method);
+    if (!encodedEndpoint) {
+      return NextResponse.json(
+        {
+          status: "error",
+          message: "Missing required query parameter: endpoint",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Decode the endpoint URL to handle double-encoding issues
+    const targetEndpoint = decodeURIComponent(encodedEndpoint);
+
+    console.log(`[AutoDoc] Forwarding request to: ${targetEndpoint}`);
+    const docData = await processRealApiRequest(targetEndpoint, req, method);
 
     console.log(`[AutoDoc] Starting database operation`);
     const spec = await handleDatabaseOperation(docData);
