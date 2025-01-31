@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EasyDocs
 
-## Getting Started
+EasyDocs is an AI-powered API documentation generator that automatically creates and maintains OpenAPI/Swagger documentation by analyzing API requests and responses in real-time.
 
-First, run the development server:
+## Features
+
+- 🤖 AI-Powered Documentation: Leverages to LLMs to automatically generate accurate API documentation
+- 🔄 Real-time Documentation Updates: Captures and processes live API traffic to keep documentation current
+- 📊 OpenAPI 3.0 Compliance: Generates standard-compliant OpenAPI specifications
+- 🌐 Swagger UI Integration: Built-in visualization of your API documentation
+- 🗄️ PostgreSQL Storage: Persistent storage of API specifications
+- 🔄 Smart Updates: Intelligently updates existing endpoint documentation while maintaining historical context
+
+## Installation
+
+1. Clone the repository
+2. Install dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Set up your environment variables:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Run the development server:
 
-## Learn More
+```bash
+pnpm dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Documentation
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### How It Works
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Proxy Setup**: EasyDocs acts as a proxy between your client and API server
+2. **Request Capture**: Intercepts API requests and responses
+3. **AI Processing**: Analyzes the captured data using LLMs to generate OpenAPI specifications
+4. **Storage**: Stores the documentation in PostgreSQL
+5. **Visualization**: Presents the documentation through Swagger UI
 
-## Deploy on Vercel
+### Usage
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+To document an API endpoint, send your request through the EasyDocs proxy:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+Original API: https://api.example.com/users
+EasyDocs Proxy: http://localhost:3000/api/autodoc?endpoint=https://api.example.com/users
+```
+
+The documentation will be automatically generated and available in the Swagger UI at the root path (`/`).
+
+## Roadmap
+
+- [ ] Enhanced AI Processing
+  - Improve prompt by applying prompt engineering techniques
+  - Reduce OpenApi parameters to the essentials
+- [ ] Enabled edition in UI
+  - ¿Create our own UI for the API documentation?
+  - How to handle conflicts between manually updated and AI-generated documentation?
+- [ ] Remove the pagination approach
+  - Pagination should be applied in the client
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## Technical Stack
+
+- Next.js 15
+- OpenAI GPT-4-turbo
+- PostgreSQL with Drizzle ORM
+- Swagger UI
+- TypeScript
+- Tailwind CSS
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contact
+
+[@iamrubenglez](https://x.com/iamrubenglez)

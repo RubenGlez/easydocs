@@ -44,7 +44,7 @@ export async function processWithAI(
         "- If using requestBody, it MUST include a 'content' property with media type",
         "- If the method is GET or there is no body, omit the requestBody field entirely",
         "- Required for POST/PUT: requestBody.content if body exists",
-        "- The tag should be inferred from the path. For example, if the path is '/api/v1/users/123/orders', the tag should be '/api/v1/users/:id/orders'",
+        "- The tag should be inferred from the path. Should be the just the first part of the path. Example: '/api/v1/users/:id/orders' -> 'users'",
       ].join("\n"),
       schema: OperationSchema,
       prompt: [
