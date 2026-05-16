@@ -1,5 +1,11 @@
-import { createDB, getAllEndpoints } from '@easydocs/core'
-import type { Endpoint } from '@easydocs/core/schema'
+import {
+  createDB,
+  getAllEndpoints,
+  getEndpointsByProject,
+  getAllProjects,
+  findOrCreateProject,
+} from '@easydocs/core'
+import type { Endpoint, Project } from '@easydocs/core/schema'
 
 let db: ReturnType<typeof createDB> | null = null
 
@@ -8,11 +14,17 @@ function getDb() {
   return db
 }
 
-export async function fetchAllEndpoints(): Promise<Endpoint[]> {
-  return getAllEndpoints(getDb())
+export async function fetchAllProjects(): Promise<Project[]> {
+  return getAllProjects(getDb())
 }
 
-// Standard definitions for all scheme names the AI can reference
+export async function fetchEndpoints(projectSlug?: string): Promise<Endpoint[]> {
+  const db = getDb()
+  if (!projectSlug) return getAllEndpoints(db)
+  const projectId = await findOrCreateProject(db, projectSlug)
+  return getEndpointsByProject(db, projectId)
+}
+
 const SECURITY_SCHEME_DEFS: Record<string, unknown> = {
   bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
   basicAuth: { type: 'http', scheme: 'basic' },
@@ -21,21 +33,18 @@ const SECURITY_SCHEME_DEFS: Record<string, unknown> = {
   cookieAuth: { type: 'apiKey', in: 'cookie', name: 'session' },
 }
 
-export function buildFullSpec(endpointList: Endpoint[]) {
+export function buildFullSpec(endpointList: Endpoint[], projectName?: string) {
   const usedSchemes = new Set<string>()
   const paths: Record<string, Record<string, unknown>> = {}
 
   for (const e of endpointList) {
     if (!e.path || !e.method) continue
-
-    // Prefer manual spec when the user has edited it
     const activeSpec = e.isManuallyEdited && e.manualSpec ? e.manualSpec : e.spec
     if (!activeSpec) continue
 
     if (!paths[e.path]) paths[e.path] = {}
     paths[e.path][e.method.toLowerCase()] = activeSpec
 
-    // Collect referenced security scheme names
     if (activeSpec.security) {
       for (const entry of activeSpec.security) {
         for (const name of Object.keys(entry)) {
@@ -45,13 +54,14 @@ export function buildFullSpec(endpointList: Endpoint[]) {
     }
   }
 
-  const securitySchemes = usedSchemes.size > 0
-    ? Object.fromEntries([...usedSchemes].map((name) => [name, SECURITY_SCHEME_DEFS[name]]))
-    : undefined
+  const securitySchemes =
+    usedSchemes.size > 0
+      ? Object.fromEntries([...usedSchemes].map((n) => [n, SECURITY_SCHEME_DEFS[n]]))
+      : undefined
 
   return {
     openapi: '3.0.3',
-    info: { title: 'API Documentation', version: '1.0.0' },
+    info: { title: projectName ?? 'API Documentation', version: '1.0.0' },
     paths,
     ...(securitySchemes ? { components: { securitySchemes } } : {}),
   }

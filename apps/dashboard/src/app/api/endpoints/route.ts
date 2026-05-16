@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server'
-import { fetchAllEndpoints } from '@/lib/db'
+import { NextRequest, NextResponse } from 'next/server'
+import { fetchEndpoints } from '@/lib/db'
 import { createDB, deleteEndpointById } from '@easydocs/core'
 
-export async function GET() {
-  const endpoints = await fetchAllEndpoints()
+export async function GET(req: NextRequest) {
+  const project = req.nextUrl.searchParams.get('project') ?? undefined
+  const endpoints = await fetchEndpoints(project)
   return NextResponse.json(endpoints)
 }
 

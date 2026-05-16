@@ -1,9 +1,21 @@
 import { globalQueue } from './queue.js'
 import { buildOperation } from './spec/builder.js'
-import { createDB, upsertEndpoint, getEndpointByPathMethod } from './storage/sqlite.js'
-import { createPgDB, pgUpsertEndpoint, pgGetByPathMethod } from './storage/postgres.js'
+import {
+  createDB,
+  upsertEndpoint,
+  getEndpointByPathMethod,
+  findOrCreateProject,
+} from './storage/sqlite.js'
+import {
+  createPgDB,
+  pgUpsertEndpoint,
+  pgGetByPathMethod,
+  pgFindOrCreateProject,
+} from './storage/postgres.js'
 import { maybeStartDashboard } from './dashboard.js'
 import type { CaptureEvent, EasyDocsConfig } from './types.js'
+
+const DEFAULT_PROJECT = 'default'
 
 type AnyDB = ReturnType<typeof createDB> | ReturnType<typeof createPgDB>
 
@@ -11,11 +23,10 @@ let db: AnyDB | null = null
 
 function getDB(config?: EasyDocsConfig): AnyDB {
   if (!db) {
-    if (config?.storage?.type === 'postgres' && config.storage.url) {
-      db = createPgDB(config.storage.url, config.storage.poolSize)
-    } else {
-      db = createDB(config?.storage?.url)
-    }
+    db =
+      config?.storage?.type === 'postgres' && config.storage.url
+        ? createPgDB(config.storage.url, config.storage.poolSize)
+        : createDB(config?.storage?.url)
   }
   return db
 }
@@ -49,14 +60,30 @@ export function capture(event: CaptureEvent, config?: EasyDocsConfig) {
     maybeStartDashboard(config.dashboard.port ?? 4999).catch(() => {})
   }
 
+  const projectSlug = config?.project ?? DEFAULT_PROJECT
+  const isPostgres = config?.storage?.type === 'postgres'
+
   globalQueue.add(async () => {
-    const isPostgres = config?.storage?.type === 'postgres'
     const database = getDB(config)
     const responseHash = hashShape(event.response)
 
+    const projectId = isPostgres
+      ? await pgFindOrCreateProject(database as ReturnType<typeof createPgDB>, projectSlug)
+      : await findOrCreateProject(database as ReturnType<typeof createDB>, projectSlug)
+
     const existing = isPostgres
-      ? await pgGetByPathMethod(database as ReturnType<typeof createPgDB>, event.path, event.method)
-      : await getEndpointByPathMethod(database as ReturnType<typeof createDB>, event.path, event.method)
+      ? await pgGetByPathMethod(
+          database as ReturnType<typeof createPgDB>,
+          projectId,
+          event.path,
+          event.method
+        )
+      : await getEndpointByPathMethod(
+          database as ReturnType<typeof createDB>,
+          projectId,
+          event.path,
+          event.method
+        )
 
     if (existing?.responseHash === responseHash && existing?.spec) return
 
@@ -65,6 +92,7 @@ export function capture(event: CaptureEvent, config?: EasyDocsConfig) {
     if (isPostgres) {
       await pgUpsertEndpoint(
         database as ReturnType<typeof createPgDB>,
+        projectId,
         event.path,
         event.method,
         spec,
@@ -73,6 +101,7 @@ export function capture(event: CaptureEvent, config?: EasyDocsConfig) {
     } else {
       await upsertEndpoint(
         database as ReturnType<typeof createDB>,
+        projectId,
         event.path,
         event.method,
         spec,

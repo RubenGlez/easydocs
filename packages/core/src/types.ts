@@ -38,6 +38,7 @@ export interface CaptureConfig {
 }
 
 export interface EasyDocsConfig {
+  project?: string
   ai?: AIConfig
   storage?: StorageConfig
   dashboard?: DashboardConfig

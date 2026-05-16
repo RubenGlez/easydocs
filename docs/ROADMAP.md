@@ -55,15 +55,13 @@ Goal: broader framework support and team collaboration features.
 
 > **Deferred to v3:** tRPC adapter, spec version history, diff view
 
-> **Deferred to v3:** tRPC adapter, spec version history, diff view
-
 ---
 
 ## v3 — Advanced Features
 
 Goal: features that make EasyDocs the go-to tool for API documentation in teams.
 
-- [ ] Multiple project support (separate spec per project/service)
+- [x] Multiple project support (separate spec per project/service)
 - [ ] Webhook notifications when specs change
 - [ ] GitHub Actions integration — post spec diffs to PRs
 - [ ] Spec linting and validation suggestions

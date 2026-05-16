@@ -1,4 +1,4 @@
-import { createDB, getAllEndpoints } from '@easydocs/core'
+import { createDB, getAllEndpoints, getEndpointsByProject, findOrCreateProject } from '@easydocs/core'
 import { capture } from '@easydocs/core'
 import type { HttpMethod } from '@easydocs/core'
 import { createServer } from 'http'
@@ -15,41 +15,53 @@ switch (command) {
     await runProxy(args)
     break
   default:
-    console.error(`Unknown command: ${command}\n\nUsage:\n  easydocs              Start proxy server\n  easydocs export       Export spec to stdout`)
+    console.error(
+      `Unknown command: ${command}\n\nUsage:\n  easydocs [proxy]           Start proxy server\n  easydocs export            Export spec to stdout\n\nFlags:\n  --project=<slug>           Scope to a project (default: all)\n  --port=<n>                 Port for proxy server (default: 3999)\n  --yaml                     Export as YAML instead of JSON`
+    )
     process.exit(1)
+}
+
+function getFlag(args: string[], name: string): string | undefined {
+  const entry = args.find((a) => a.startsWith(`--${name}=`))
+  return entry?.split('=').slice(1).join('=')
 }
 
 // ─── Export ───────────────────────────────────────────────────────────────────
 
 async function runExport(args: string[]) {
   const format = args.includes('--yaml') ? 'yaml' : 'json'
+  const projectSlug = getFlag(args, 'project')
   const db = createDB(process.env.EASYDOCS_DB_URL)
-  const endpoints = await getAllEndpoints(db)
+
+  let endpoints
+  if (projectSlug) {
+    const projectId = await findOrCreateProject(db, projectSlug)
+    endpoints = await getEndpointsByProject(db, projectId)
+  } else {
+    endpoints = await getAllEndpoints(db)
+  }
 
   const spec = {
     openapi: '3.0.3',
-    info: { title: 'API Documentation', version: '1.0.0' },
+    info: { title: projectSlug ?? 'API Documentation', version: '1.0.0' },
     paths: endpoints.reduce<Record<string, Record<string, unknown>>>((acc, e) => {
-      if (!e.path || !e.method || !e.spec) return acc
-      if (!acc[e.path]) acc[e.path] = {}
+      if (!e.path || !e.method) return acc
       const activeSpec = e.isManuallyEdited && e.manualSpec ? e.manualSpec : e.spec
+      if (!activeSpec) return acc
+      if (!acc[e.path]) acc[e.path] = {}
       acc[e.path][e.method.toLowerCase()] = activeSpec
       return acc
     }, {}),
   }
 
-  if (format === 'yaml') {
-    process.stdout.write(yaml.dump(spec))
-  } else {
-    process.stdout.write(JSON.stringify(spec, null, 2))
-  }
+  process.stdout.write(format === 'yaml' ? yaml.dump(spec) : JSON.stringify(spec, null, 2))
 }
 
 // ─── Proxy ────────────────────────────────────────────────────────────────────
 
 async function runProxy(args: string[]) {
-  const portArg = args.find((a) => a.startsWith('--port='))
-  const port = portArg ? parseInt(portArg.split('=')[1], 10) : 3999
+  const port = parseInt(getFlag(args, 'port') ?? '3999', 10)
+  const projectSlug = getFlag(args, 'project') ?? 'default'
 
   const server = createServer(async (req, res) => {
     const reqUrl = new URL(req.url ?? '/', `http://localhost:${port}`)
@@ -95,40 +107,35 @@ async function runProxy(args: string[]) {
 
     const responseText = await upstream.text()
     let responseBody: unknown
-    try {
-      responseBody = JSON.parse(responseText)
-    } catch {
-      responseBody = responseText
-    }
+    try { responseBody = JSON.parse(responseText) } catch { responseBody = responseText }
 
     let parsedRequestBody: unknown = null
     if (requestBody?.length) {
-      try {
-        parsedRequestBody = JSON.parse(requestBody.toString())
-      } catch {
-        parsedRequestBody = requestBody.toString()
-      }
+      try { parsedRequestBody = JSON.parse(requestBody.toString()) } catch { parsedRequestBody = requestBody.toString() }
     }
 
-    capture({
-      method: method as HttpMethod,
-      path: targetUrl.pathname,
-      query: Object.fromEntries(targetUrl.searchParams.entries()),
-      params: {},
-      body: parsedRequestBody,
-      response: responseBody,
-      status: upstream.status,
-      requestHeaders: req.headers as Record<string, string>,
-      responseHeaders: Object.fromEntries(upstream.headers.entries()),
-      durationMs: Date.now() - startedAt,
-    })
+    capture(
+      {
+        method: method as HttpMethod,
+        path: targetUrl.pathname,
+        query: Object.fromEntries(targetUrl.searchParams.entries()),
+        params: {},
+        body: parsedRequestBody,
+        response: responseBody,
+        status: upstream.status,
+        requestHeaders: req.headers as Record<string, string>,
+        responseHeaders: Object.fromEntries(upstream.headers.entries()),
+        durationMs: Date.now() - startedAt,
+      },
+      { project: projectSlug }
+    )
 
     res.writeHead(upstream.status, Object.fromEntries(upstream.headers.entries()))
     res.end(responseText)
   })
 
   server.listen(port, () => {
-    console.log(`[EasyDocs] Proxy listening on http://localhost:${port}`)
+    console.log(`[EasyDocs] Proxy → http://localhost:${port} (project: ${projectSlug})`)
     console.log(`[EasyDocs] Usage: http://localhost:${port}?target=https://api.example.com/users`)
   })
 }
