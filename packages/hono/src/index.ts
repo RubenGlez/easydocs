@@ -1,0 +1,36 @@
+import { capture } from '@easydocs/core'
+import type { EasyDocsConfig, HttpMethod } from '@easydocs/core'
+import type { Context, Next } from 'hono'
+
+export function easydocs(config?: EasyDocsConfig) {
+  return async function easydocsMiddleware(c: Context, next: Next) {
+    const startedAt = Date.now()
+    await next()
+
+    let responseBody: unknown
+    try {
+      responseBody = await c.res.clone().json()
+    } catch {
+      responseBody = null
+    }
+
+    const url = new URL(c.req.url)
+    const routePath = c.req.routePath ?? url.pathname
+
+    capture(
+      {
+        method: c.req.method as HttpMethod,
+        path: routePath,
+        query: Object.fromEntries(url.searchParams.entries()),
+        params: c.req.param() as Record<string, string>,
+        body: await c.req.raw.clone().json().catch(() => null),
+        response: responseBody,
+        status: c.res.status,
+        requestHeaders: Object.fromEntries(c.req.raw.headers.entries()),
+        responseHeaders: Object.fromEntries(c.res.headers.entries()),
+        durationMs: Date.now() - startedAt,
+      },
+      config
+    )
+  }
+}

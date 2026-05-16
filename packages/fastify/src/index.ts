@@ -1,0 +1,51 @@
+import { capture } from '@easydocs/core'
+import type { EasyDocsConfig, HttpMethod } from '@easydocs/core'
+import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify'
+import fp from 'fastify-plugin'
+
+const plugin: FastifyPluginAsync<EasyDocsConfig> = async (fastify, config) => {
+  fastify.addHook(
+    'onSend',
+    async (request: FastifyRequest, reply: FastifyReply, payload: unknown) => {
+      const startedAt = (request as unknown as { easydocsStart?: number }).easydocsStart ?? Date.now()
+
+      let parsedBody: unknown = null
+      if (typeof payload === 'string') {
+        try {
+          parsedBody = JSON.parse(payload)
+        } catch {
+          parsedBody = payload
+        }
+      } else {
+        parsedBody = payload
+      }
+
+      capture(
+        {
+          method: request.method as HttpMethod,
+          path: request.routeOptions?.url ?? request.url.split('?')[0],
+          query: request.query as Record<string, string>,
+          params: request.params as Record<string, string>,
+          body: request.body,
+          response: parsedBody,
+          status: reply.statusCode,
+          requestHeaders: request.headers as Record<string, string>,
+          responseHeaders: reply.getHeaders() as Record<string, string>,
+          durationMs: Date.now() - startedAt,
+        },
+        config
+      )
+
+      return payload
+    }
+  )
+
+  fastify.addHook('onRequest', async (request: FastifyRequest) => {
+    ;(request as unknown as { easydocsStart: number }).easydocsStart = Date.now()
+  })
+}
+
+export const easydocs = fp(plugin, {
+  name: 'easydocs',
+  fastify: '>=4.0.0',
+})
