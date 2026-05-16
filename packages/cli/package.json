@@ -1,0 +1,24 @@
+{
+  "name": "@easydocs/cli",
+  "version": "0.1.0",
+  "description": "EasyDocs CLI — proxy mode and spec export",
+  "type": "module",
+  "bin": {
+    "easydocs": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@easydocs/core": "workspace:*",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20",
+    "tsup": "^8.3.0",
+    "typescript": "^5"
+  }
+}

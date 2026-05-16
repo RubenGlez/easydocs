@@ -21,7 +21,7 @@ export interface AIConfig {
 }
 
 export interface StorageConfig {
-  type?: 'sqlite'
+  type?: 'sqlite' | 'postgres'
   url?: string
 }
 

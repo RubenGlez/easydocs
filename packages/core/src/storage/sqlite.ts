@@ -15,6 +15,9 @@ const INIT_SQL = `
     path TEXT NOT NULL,
     method TEXT NOT NULL,
     spec TEXT,
+    manual_spec TEXT,
+    is_manually_edited INTEGER DEFAULT 0,
+    has_conflict INTEGER DEFAULT 0,
     response_hash TEXT,
     created_at INTEGER DEFAULT (unixepoch()),
     updated_at INTEGER DEFAULT (unixepoch())
@@ -31,12 +34,11 @@ function ensureDir(url: string) {
   if (url.startsWith('file:')) {
     const filePath = url.slice('file:'.length)
     const dir = path.dirname(filePath)
-    // Use sync fs to avoid async in constructor
     try {
       const { mkdirSync } = require('fs') as typeof import('fs')
       mkdirSync(dir, { recursive: true })
     } catch {
-      // directory already exists or unsupported
+      // already exists or unsupported
     }
   }
 }
@@ -47,7 +49,6 @@ export function createDB(url?: string) {
   const client = createClient({ url: dbUrl })
   const db = drizzle(client, { schema: { endpoints } })
 
-  // Fire-and-forget schema init
   client.executeMultiple(INIT_SQL).catch((err: unknown) => {
     console.error('[EasyDocs] Failed to initialize database:', err)
   })
@@ -68,10 +69,13 @@ export async function upsertEndpoint(
     .where(and(eq(endpoints.path, path), eq(endpoints.method, method)))
     .get()
 
+  // If the user has manually edited the spec, flag a conflict instead of overwriting
+  const hasConflict = !!(existing?.isManuallyEdited && existing.manualSpec)
+
   if (existing) {
     await db
       .update(endpoints)
-      .set({ spec, responseHash, updatedAt: new Date() })
+      .set({ spec, responseHash, hasConflict, updatedAt: new Date() })
       .where(eq(endpoints.id, existing.id))
     return existing.id
   }
@@ -79,6 +83,30 @@ export async function upsertEndpoint(
   const id = crypto.randomUUID()
   await db.insert(endpoints).values({ id, path, method, spec, responseHash })
   return id
+}
+
+export async function saveManualSpec(db: DB, id: string, manualSpec: Operation) {
+  await db
+    .update(endpoints)
+    .set({ manualSpec, isManuallyEdited: true, hasConflict: false, updatedAt: new Date() })
+    .where(eq(endpoints.id, id))
+}
+
+export async function resolveConflict(db: DB, id: string, keep: 'ai' | 'manual') {
+  if (keep === 'ai') {
+    await db
+      .update(endpoints)
+      .set({ manualSpec: null, isManuallyEdited: false, hasConflict: false, updatedAt: new Date() })
+      .where(eq(endpoints.id, id))
+  } else {
+    // Keep manual — promote manualSpec to spec, clear conflict
+    const row = await db.select().from(endpoints).where(eq(endpoints.id, id)).get()
+    if (!row?.manualSpec) return
+    await db
+      .update(endpoints)
+      .set({ spec: row.manualSpec, manualSpec: null, isManuallyEdited: true, hasConflict: false, updatedAt: new Date() })
+      .where(eq(endpoints.id, id))
+  }
 }
 
 export async function getEndpointByPathMethod(db: DB, path: string, method: HttpMethod) {

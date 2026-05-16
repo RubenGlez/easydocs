@@ -1,19 +1,27 @@
 import { globalQueue } from './queue.js'
 import { buildOperation } from './spec/builder.js'
 import { createDB, upsertEndpoint, getEndpointByPathMethod } from './storage/sqlite.js'
+import { createPgDB, pgUpsertEndpoint, pgGetByPathMethod } from './storage/postgres.js'
 import { maybeStartDashboard } from './dashboard.js'
 import type { CaptureEvent, EasyDocsConfig } from './types.js'
 
-let db: ReturnType<typeof createDB> | null = null
+type AnyDB = ReturnType<typeof createDB> | ReturnType<typeof createPgDB>
 
-function getDB(config?: EasyDocsConfig) {
-  if (!db) db = createDB(config?.storage?.url)
+let db: AnyDB | null = null
+
+function getDB(config?: EasyDocsConfig): AnyDB {
+  if (!db) {
+    if (config?.storage?.type === 'postgres' && config.storage.url) {
+      db = createPgDB(config.storage.url)
+    } else {
+      db = createDB(config?.storage?.url)
+    }
+  }
   return db
 }
 
 function hashShape(value: unknown): string {
-  const shape = extractShape(value)
-  return JSON.stringify(shape)
+  return JSON.stringify(extractShape(value))
 }
 
 function extractShape(value: unknown): unknown {
@@ -28,14 +36,9 @@ function extractShape(value: unknown): unknown {
 }
 
 function shouldCapture(path: string, config?: EasyDocsConfig): boolean {
-  const captureConfig = config?.capture
-  if (!captureConfig) return true
-
-  const { ignoreRoutes, includePaths } = captureConfig
-
+  const { ignoreRoutes, includePaths } = config?.capture ?? {}
   if (ignoreRoutes?.some((r) => path.startsWith(r))) return false
   if (includePaths && !includePaths.some((p) => path.startsWith(p))) return false
-
   return true
 }
 
@@ -47,15 +50,34 @@ export function capture(event: CaptureEvent, config?: EasyDocsConfig) {
   }
 
   globalQueue.add(async () => {
+    const isPostgres = config?.storage?.type === 'postgres'
     const database = getDB(config)
     const responseHash = hashShape(event.response)
 
-    const existing = await getEndpointByPathMethod(database, event.path, event.method)
+    const existing = isPostgres
+      ? await pgGetByPathMethod(database as ReturnType<typeof createPgDB>, event.path, event.method)
+      : await getEndpointByPathMethod(database as ReturnType<typeof createDB>, event.path, event.method)
 
-    // Skip AI processing if the response shape hasn't changed
     if (existing?.responseHash === responseHash && existing?.spec) return
 
     const spec = await buildOperation(event, existing?.spec ?? null, config?.ai)
-    await upsertEndpoint(database, event.path, event.method, spec, responseHash)
+
+    if (isPostgres) {
+      await pgUpsertEndpoint(
+        database as ReturnType<typeof createPgDB>,
+        event.path,
+        event.method,
+        spec,
+        responseHash
+      )
+    } else {
+      await upsertEndpoint(
+        database as ReturnType<typeof createDB>,
+        event.path,
+        event.method,
+        spec,
+        responseHash
+      )
+    }
   })
 }

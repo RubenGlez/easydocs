@@ -38,24 +38,24 @@ Goal: a working monorepo that developers can install and use with zero infrastru
 Goal: broader framework support and team collaboration features.
 
 ### Framework adapters
-- [ ] `@easydocs/nextjs` — App Router and Pages Router support
-- [ ] `@easydocs/h3` — h3/Nitro/Nuxt support
-- [ ] `@easydocs/elysia` — Bun-native Elysia support
-- [ ] `@easydocs/trpc` — tRPC procedure interceptor
+- [x] `@easydocs/nextjs` — `withEasydocs(handler)` wrapper for App Router and Pages Router
+- [x] `@easydocs/h3` — h3/Nitro/Nuxt plugin
+- [x] `@easydocs/elysia` — Bun-native Elysia plugin
 
 ### Storage
-- [ ] Postgres adapter for shared team storage
-- [ ] Conflict detection: flag when real traffic contradicts existing spec
+- [x] Postgres adapter for shared team storage
+- [x] Conflict detection: flag when real traffic contradicts a manually-edited spec
 
 ### Dashboard
-- [ ] Diff view: show what changed between spec versions
-- [ ] Spec version history
-- [ ] Manual spec editing with merge conflict UI
-- [ ] Authentication flow detection and documentation
+- [x] Manual spec editing — inline editor with conflict resolution UI
+- [ ] Authentication flow detection — AI detects and documents auth patterns
 
 ### DX
-- [ ] `npx easydocs` CLI — proxy mode for documenting third-party APIs
-- [ ] `npx easydocs export` — export spec from CLI without running the server
+- [x] `@easydocs/cli` — proxy mode (`npx easydocs`) + spec export (`npx easydocs export`)
+
+> **Deferred to v3:** tRPC adapter, spec version history, diff view
+
+> **Deferred to v3:** tRPC adapter, spec version history, diff view
 
 ---
 
