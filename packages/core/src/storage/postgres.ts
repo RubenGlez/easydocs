@@ -37,8 +37,8 @@ const INIT_SQL = `
 
 export type PgDB = ReturnType<typeof createPgDB>
 
-export function createPgDB(url: string) {
-  const client = postgresJs(url)
+export function createPgDB(url: string, poolSize?: number) {
+  const client = postgresJs(url, { max: poolSize ?? 10 })
   const db = drizzle(client, { schema: { endpoints: pgEndpoints } })
 
   client.unsafe(INIT_SQL).catch((err: unknown) => {

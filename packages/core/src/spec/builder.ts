@@ -13,6 +13,30 @@ function trimResponse(response: unknown, maxItems = 1): unknown {
   return response
 }
 
+function detectAuthSchemes(
+  headers: Record<string, string>,
+  query: Record<string, string>
+): string[] {
+  const h = Object.fromEntries(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v]))
+  const q = Object.fromEntries(Object.entries(query).map(([k, v]) => [k.toLowerCase(), v]))
+  const schemes: string[] = []
+
+  const auth = h['authorization']
+  if (auth) {
+    if (/^bearer /i.test(auth)) schemes.push('bearerAuth')
+    else if (/^basic /i.test(auth)) schemes.push('basicAuth')
+    else schemes.push('bearerAuth') // unknown auth header, treat as bearer
+  }
+
+  if (h['x-api-key'] ?? h['api-key']) schemes.push('apiKeyHeader')
+  if (q['api_key'] ?? q['apikey'] ?? q['key']) schemes.push('apiKeyQuery')
+
+  // Cookie auth only when nothing else is present
+  if (schemes.length === 0 && h['cookie']) schemes.push('cookieAuth')
+
+  return [...new Set(schemes)]
+}
+
 export async function buildOperation(
   event: CaptureEvent,
   existingSpec: unknown | null,
@@ -20,6 +44,13 @@ export async function buildOperation(
 ) {
   const model = resolveModel(aiConfig)
   const trimmedResponse = trimResponse(event.response)
+  const detectedAuth = detectAuthSchemes(event.requestHeaders, event.query)
+
+  const authGuideline =
+    detectedAuth.length > 0
+      ? `- This request uses authentication. Detected scheme(s): ${detectedAuth.join(', ')}. ` +
+        `Set the security field to reference these scheme name(s), e.g. [{ "bearerAuth": [] }].`
+      : '- No authentication headers detected. Leave security as undefined unless the existing spec already documents it.'
 
   const { object } = await generateObject({
     model,
@@ -32,6 +63,8 @@ export async function buildOperation(
       '- omit requestBody entirely for GET/HEAD/DELETE requests with no body',
       '- if a current spec is provided, update it rather than replacing it — preserve documented fields',
       '- write concise but useful summaries and descriptions',
+      authGuideline,
+      '- valid security scheme names: bearerAuth, basicAuth, apiKeyHeader, apiKeyQuery, cookieAuth',
     ].join('\n'),
     prompt: [
       `Method: ${event.method}`,
@@ -41,6 +74,7 @@ export async function buildOperation(
       `Request body: ${event.body ? JSON.stringify(event.body) : 'none'}`,
       `Response status: ${event.status}`,
       `Response body: ${JSON.stringify(trimmedResponse)}`,
+      detectedAuth.length > 0 ? `Detected auth: ${detectedAuth.join(', ')}` : '',
       existingSpec ? `Current spec (update this): ${JSON.stringify(existingSpec)}` : '',
     ]
       .filter(Boolean)

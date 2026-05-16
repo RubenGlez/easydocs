@@ -12,7 +12,7 @@ let db: AnyDB | null = null
 function getDB(config?: EasyDocsConfig): AnyDB {
   if (!db) {
     if (config?.storage?.type === 'postgres' && config.storage.url) {
-      db = createPgDB(config.storage.url)
+      db = createPgDB(config.storage.url, config.storage.poolSize)
     } else {
       db = createDB(config?.storage?.url)
     }

@@ -48,7 +48,7 @@ Goal: broader framework support and team collaboration features.
 
 ### Dashboard
 - [x] Manual spec editing — inline editor with conflict resolution UI
-- [ ] Authentication flow detection — AI detects and documents auth patterns
+- [x] Authentication flow detection — AI detects and documents auth patterns
 
 ### DX
 - [x] `@easydocs/cli` — proxy mode (`npx easydocs`) + spec export (`npx easydocs export`)

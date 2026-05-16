@@ -23,6 +23,7 @@ export interface AIConfig {
 export interface StorageConfig {
   type?: 'sqlite' | 'postgres'
   url?: string
+  poolSize?: number
 }
 
 export interface DashboardConfig {
