@@ -1,92 +1,177 @@
 # EasyDocs
 
-EasyDocs is an AI-powered API documentation generator that automatically creates and maintains OpenAPI/Swagger documentation by analyzing API requests and responses in real-time.
+**Add one line. Get OpenAPI docs for free.**
 
-## Features
+EasyDocs is a middleware-first API documentation tool. Add it to your server and it automatically generates accurate, up-to-date OpenAPI 3.0 specs from real traffic — no spec files to write, no annotations to maintain.
 
-- 🤖 AI-Powered Documentation: Leverages to LLMs to automatically generate accurate API documentation
-- 🔄 Real-time Documentation Updates: Captures and processes live API traffic to keep documentation current
-- 📊 OpenAPI 3.0 Compliance: Generates standard-compliant OpenAPI specifications
-- 🌐 Swagger UI Integration: Built-in visualization of your API documentation
-- 🗄️ PostgreSQL Storage: Persistent storage of API specifications
-- 🔄 Smart Updates: Intelligently updates existing endpoint documentation while maintaining historical context
+```ts
+import { easydocs } from '@easydocs/express'
 
-## Installation
+app.use(easydocs())
+// your routes stay exactly the same
+```
 
-1. Clone the repository
-2. Install dependencies:
+The docs dashboard runs at `http://localhost:4999`.
+
+## How it works
+
+1. EasyDocs middleware intercepts every request and response
+2. A background queue feeds the captured data to an AI model
+3. The AI generates or updates an OpenAPI 3.0 Operation spec
+4. The spec is stored in a local SQLite database
+5. The dashboard reads from that database and renders live docs
+
+Nothing blocks your request. The capture is fire-and-forget.
+
+## Packages
+
+| Package | Framework |
+|---------|-----------|
+| [`@easydocs/express`](./packages/express) | Express |
+| [`@easydocs/fastify`](./packages/fastify) | Fastify |
+| [`@easydocs/hono`](./packages/hono) | Hono |
+| [`@easydocs/nestjs`](./packages/nestjs) | NestJS |
+
+## Quick start
+
+### Express
+
+```bash
+npm install @easydocs/express
+```
+
+```ts
+import express from 'express'
+import { easydocs } from '@easydocs/express'
+
+const app = express()
+app.use(express.json())
+app.use(easydocs())
+```
+
+### Fastify
+
+```bash
+npm install @easydocs/fastify
+```
+
+```ts
+import Fastify from 'fastify'
+import { easydocs } from '@easydocs/fastify'
+
+const app = Fastify()
+await app.register(easydocs)
+```
+
+### Hono
+
+```bash
+npm install @easydocs/hono
+```
+
+```ts
+import { Hono } from 'hono'
+import { easydocs } from '@easydocs/hono'
+
+const app = new Hono()
+app.use(easydocs())
+```
+
+### NestJS
+
+```bash
+npm install @easydocs/nestjs
+```
+
+```ts
+import { EasyDocsModule } from '@easydocs/nestjs'
+
+@Module({
+  imports: [EasyDocsModule.forRoot()],
+})
+export class AppModule {}
+```
+
+## Configuration
+
+```ts
+easydocs({
+  ai: {
+    provider: 'openai',       // 'openai' | 'anthropic' | 'ollama'
+    model: 'gpt-4o',          // optional, sensible defaults per provider
+    apiKey: '...',            // optional, falls back to env vars
+  },
+  storage: {
+    url: 'file:./docs.sqlite', // optional, defaults to ~/.easydocs/db.sqlite
+  },
+  capture: {
+    ignoreRoutes: ['/health', '/metrics'],
+  },
+  dashboard: {
+    autoStart: true,           // spawn dashboard server on first capture (dev only)
+    port: 4999,
+  },
+})
+```
+
+### AI provider detection
+
+EasyDocs auto-detects the provider from environment variables:
+
+| Env var | Provider used |
+|---------|---------------|
+| `ANTHROPIC_API_KEY` | Anthropic Claude |
+| `OPENAI_API_KEY` | OpenAI GPT |
+| neither | Ollama (localhost:11434) |
+
+Set `ai.provider` in config to override.
+
+## Dashboard
+
+The dashboard is a Next.js app at `apps/dashboard`, served on port 4999.
+
+**Run manually:**
+```bash
+pnpm --filter @easydocs/dashboard dev
+```
+
+**Auto-start on first capture:**
+```ts
+easydocs({ dashboard: { autoStart: true } })
+```
+
+## Repository structure
+
+```
+packages/
+  core/       ← AI, storage, spec building (shared by all adapters)
+  express/    ← @easydocs/express
+  fastify/    ← @easydocs/fastify
+  hono/       ← @easydocs/hono
+  nestjs/     ← @easydocs/nestjs
+apps/
+  dashboard/  ← docs UI (port 4999)
+docs/
+  ARCHITECTURE.md
+  MISSION.md
+  ROADMAP.md
+  STACK.md
+  adr/        ← architecture decision records
+```
+
+## Development
 
 ```bash
 pnpm install
+pnpm dev        # runs all packages and dashboard in parallel
+pnpm build      # builds all packages
+pnpm typecheck  # type checks all packages
 ```
-
-3. Set up your environment variables:
-
-```bash
-cp .env.example .env
-```
-
-4. Run the development server:
-
-```bash
-pnpm dev
-```
-
-## Documentation
-
-### How It Works
-
-1. **Proxy Setup**: EasyDocs acts as a proxy between your client and API server
-2. **Request Capture**: Intercepts API requests and responses
-3. **AI Processing**: Analyzes the captured data using LLMs to generate OpenAPI specifications
-4. **Storage**: Stores the documentation in PostgreSQL
-5. **Visualization**: Presents the documentation through Swagger UI
-
-### Usage
-
-To document an API endpoint, send your request through the EasyDocs proxy:
-
-```
-Original API: https://api.example.com/users
-EasyDocs Proxy: http://localhost:3000/api/autodoc?endpoint=https://api.example.com/users
-```
-
-The documentation will be automatically generated and available in the Swagger UI at the root path (`/`).
-
-## Roadmap
-
-- [ ] Enhanced AI Processing
-  - Improve prompt by applying prompt engineering techniques
-  - Reduce OpenApi parameters to the essentials
-- [ ] Enabled edition in UI
-  - ¿Create our own UI for the API documentation?
-  - How to handle conflicts between manually updated and AI-generated documentation?
-- [ ] Remove the pagination approach
-  - Pagination should be applied in the client
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## Technical Stack
-
-- Next.js 15
-- OpenAI GPT-4-turbo
-- PostgreSQL with Drizzle ORM
-- Swagger UI
-- TypeScript
-- Tailwind CSS
+See [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md).
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Contact
-
-[@iamrubenglez](https://x.com/iamrubenglez)
+MIT
