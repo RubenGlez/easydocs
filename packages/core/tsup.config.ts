@@ -7,7 +7,7 @@ export default defineConfig({
     dashboard: 'src/dashboard.ts',
   },
   format: ['esm', 'cjs'],
-  dts: true,
+  dts: { resolve: true },
   sourcemap: true,
   clean: true,
 })
