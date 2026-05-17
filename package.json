@@ -8,7 +8,10 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
-    "eval": "pnpm --filter easydocs-evals eval"
+    "eval": "pnpm --filter easydocs-evals eval",
+    "release": "node scripts/release.js",
+    "release:minor": "node scripts/release.js minor",
+    "release:major": "node scripts/release.js major"
   },
   "devDependencies": {
     "typescript": "^5",
