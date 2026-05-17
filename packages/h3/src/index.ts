@@ -14,7 +14,6 @@ import {
 declare module 'h3' {
   interface H3EventContext {
     _easydocsStart?: number
-    _easydocsBody?: unknown
   }
 }
 
@@ -26,12 +25,12 @@ export function easydocs(config?: EasyDocsConfig): EventHandler {
 
     async onBeforeResponse(event: H3Event, response: { body?: unknown }) {
       const url = getRequestURL(event)
-      const method = getMethod(event) as HttpMethod
+      const rawMethod = getMethod(event)
 
       let requestBody: unknown = null
-      if (method !== 'GET' && method !== 'HEAD') {
+      if (rawMethod !== 'GET' && rawMethod !== 'HEAD') {
         try {
-          requestBody = event.context._easydocsBody ?? (await readBody(event))
+          requestBody = await readBody(event)
         } catch {
           // non-JSON body
         }
@@ -39,7 +38,7 @@ export function easydocs(config?: EasyDocsConfig): EventHandler {
 
       capture(
         {
-          method,
+          method: rawMethod as HttpMethod,
           path: url.pathname,
           query: getQuery(event) as Record<string, string>,
           params: (event.context.params as Record<string, string>) ?? {},
@@ -55,5 +54,7 @@ export function easydocs(config?: EasyDocsConfig): EventHandler {
         config
       )
     },
+
+    handler: () => {},
   })
 }

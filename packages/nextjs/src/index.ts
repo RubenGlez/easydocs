@@ -1,12 +1,38 @@
 import { capture } from '@easydocs/core'
 import type { EasyDocsConfig, HttpMethod } from '@easydocs/core'
-import type { NextRequest } from 'next/server'
-import type { NextApiRequest, NextApiResponse } from 'next'
+
+// ─── Local structural types (avoid importing from next at build time) ──────────
+
+interface NextURL {
+  pathname: string
+  searchParams: URLSearchParams
+}
+
+interface NextRequestLike {
+  method: string
+  nextUrl: NextURL
+  headers: Headers
+  clone(): { json(): Promise<unknown> }
+}
+
+interface NextApiRequestLike {
+  method?: string
+  url?: string
+  query: Record<string, string | string[]>
+  body: unknown
+  headers: Record<string, string | string[] | undefined>
+}
+
+interface NextApiResponseLike {
+  statusCode: number
+  json: (body: unknown) => NextApiResponseLike
+  getHeaders(): Record<string, string | string[] | number | undefined>
+}
 
 // ─── App Router ───────────────────────────────────────────────────────────────
 
 type AppRouterContext = { params?: Promise<Record<string, string>> | Record<string, string> }
-type AppRouterHandler = (req: NextRequest, ctx?: AppRouterContext) => Promise<Response> | Response
+type AppRouterHandler = (req: NextRequestLike, ctx?: AppRouterContext) => Promise<Response> | Response
 
 export function withEasydocs(handler: AppRouterHandler, config?: EasyDocsConfig): AppRouterHandler {
   return async (req, ctx) => {
@@ -57,7 +83,7 @@ export function withEasydocs(handler: AppRouterHandler, config?: EasyDocsConfig)
 
 // ─── Pages Router ─────────────────────────────────────────────────────────────
 
-type PagesHandler = (req: NextApiRequest, res: NextApiResponse) => void | Promise<void>
+type PagesHandler = (req: NextApiRequestLike, res: NextApiResponseLike) => void | Promise<void>
 
 export function withEasydocsPagesHandler(
   handler: PagesHandler,
@@ -70,7 +96,7 @@ export function withEasydocsPagesHandler(
     res.json = function (body: unknown) {
       capture(
         {
-          method: req.method as HttpMethod,
+          method: (req.method ?? 'GET') as HttpMethod,
           path: req.url?.split('?')[0] ?? '/',
           query: req.query as Record<string, string>,
           params: {},

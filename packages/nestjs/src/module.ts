@@ -1,4 +1,5 @@
-import { Module, DynamicModule, APP_INTERCEPTOR } from '@nestjs/common'
+import { Module, DynamicModule } from '@nestjs/common'
+import { APP_INTERCEPTOR } from '@nestjs/core'
 import { EasyDocsInterceptor, EASYDOCS_CONFIG } from './interceptor'
 import type { EasyDocsConfig } from '@easydocs/core'
 

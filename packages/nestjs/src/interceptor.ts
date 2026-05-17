@@ -8,7 +8,21 @@ import {
 import { Observable, tap } from 'rxjs'
 import { capture } from '@easydocs/core'
 import type { EasyDocsConfig, HttpMethod } from '@easydocs/core'
-import type { Request, Response } from 'express'
+
+interface HttpRequest {
+  method: string
+  path: string
+  route?: { path?: string }
+  query: Record<string, string>
+  params: Record<string, string>
+  body: unknown
+  headers: Record<string, string>
+}
+
+interface HttpResponse {
+  statusCode: number
+  getHeaders(): Record<string, unknown>
+}
 
 export const EASYDOCS_CONFIG = Symbol('EASYDOCS_CONFIG')
 
@@ -19,13 +33,12 @@ export class EasyDocsInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const startedAt = Date.now()
     const http = context.switchToHttp()
-    const req = http.getRequest<Request>()
-    const res = http.getResponse<Response>()
+    const req = http.getRequest<HttpRequest>()
+    const res = http.getResponse<HttpResponse>()
 
     return next.handle().pipe(
       tap((responseBody: unknown) => {
-        const routePath =
-          (req as unknown as { route?: { path?: string } }).route?.path ?? req.path
+        const routePath = req.route?.path ?? req.path
 
         capture(
           {

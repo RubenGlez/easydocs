@@ -1,5 +1,6 @@
 import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
+import type { LanguageModelV1 } from '@ai-sdk/provider'
 import type { AIConfig } from '../types.js'
 
 const DEFAULT_MODELS = {
@@ -8,7 +9,7 @@ const DEFAULT_MODELS = {
   ollama: 'llama3.2',
 }
 
-export function resolveModel(config?: AIConfig) {
+export function resolveModel(config?: AIConfig): LanguageModelV1 {
   const provider = config?.provider
 
   if (provider === 'anthropic' || (!provider && !config?.apiKey && process.env.ANTHROPIC_API_KEY)) {
