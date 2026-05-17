@@ -1,0 +1,20 @@
+{
+  "method": "GET",
+  "path": "/users",
+  "query": { "page": "1", "limit": "10", "role": "user" },
+  "params": {},
+  "body": null,
+  "response": {
+    "data": [
+      { "id": "2", "name": "Bob Jones", "email": "bob@example.com", "role": "user", "createdAt": "2024-02-20T14:30:00Z" }
+    ],
+    "total": 2,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 1
+  },
+  "status": 200,
+  "requestHeaders": { "accept": "application/json" },
+  "responseHeaders": { "content-type": "application/json" },
+  "durationMs": 12
+}

@@ -1,0 +1,15 @@
+{
+  "method": "GET",
+  "path": "/me",
+  "query": {},
+  "params": {},
+  "body": null,
+  "response": {
+    "user": { "id": "1", "name": "Alice Smith", "email": "alice@example.com", "role": "admin", "createdAt": "2024-01-15T10:00:00Z" },
+    "orders": 1
+  },
+  "status": 200,
+  "requestHeaders": { "authorization": "Bearer token-1", "accept": "application/json" },
+  "responseHeaders": { "content-type": "application/json" },
+  "durationMs": 8
+}

@@ -1,0 +1,18 @@
+{
+  "method": "POST",
+  "path": "/users",
+  "query": {},
+  "params": {},
+  "body": { "name": "Dave Brown", "email": "dave@example.com", "role": "user" },
+  "response": {
+    "id": "4",
+    "name": "Dave Brown",
+    "email": "dave@example.com",
+    "role": "user",
+    "createdAt": "2024-05-16T12:00:00Z"
+  },
+  "status": 201,
+  "requestHeaders": { "content-type": "application/json", "accept": "application/json" },
+  "responseHeaders": { "content-type": "application/json" },
+  "durationMs": 18
+}

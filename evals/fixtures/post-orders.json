@@ -1,0 +1,27 @@
+{
+  "method": "POST",
+  "path": "/orders",
+  "query": {},
+  "params": {},
+  "body": {
+    "items": [
+      { "productId": "p1", "qty": 2 },
+      { "productId": "p3", "qty": 5 }
+    ]
+  },
+  "response": {
+    "id": "o2",
+    "userId": "1",
+    "items": [
+      { "productId": "p1", "qty": 2, "unitPrice": 49.99 },
+      { "productId": "p3", "qty": 5, "unitPrice": 9.99 }
+    ],
+    "status": "pending",
+    "total": 149.93,
+    "createdAt": "2024-05-16T12:30:00Z"
+  },
+  "status": 201,
+  "requestHeaders": { "authorization": "Bearer token-1", "content-type": "application/json" },
+  "responseHeaders": { "content-type": "application/json" },
+  "durationMs": 31
+}

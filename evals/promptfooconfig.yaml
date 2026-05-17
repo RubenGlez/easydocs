@@ -1,0 +1,180 @@
+description: EasyDocs — OpenAPI spec generation quality evals
+
+providers:
+  - id: 'file://provider.ts'
+    label: easydocs-builder
+
+# The prompt is unused (provider drives everything from the fixture var),
+# but promptfoo requires at least one prompt entry.
+prompts:
+  - '{{fixture}}'
+
+defaultTest:
+  assert:
+    # Output must be valid JSON
+    - type: is-json
+      metric: valid-json
+
+    # Must have a summary field
+    - type: javascript
+      value: |
+        const spec = JSON.parse(output);
+        return typeof spec.summary === 'string' && spec.summary.length > 0;
+      metric: has-summary
+
+    # Must have at least one response defined
+    - type: javascript
+      value: |
+        const spec = JSON.parse(output);
+        return spec.responses && Object.keys(spec.responses).length > 0;
+      metric: has-responses
+
+    # Response keys must be valid HTTP status code strings
+    - type: javascript
+      value: |
+        const spec = JSON.parse(output);
+        return Object.keys(spec.responses).every(k => /^\d{3}$/.test(k));
+      metric: valid-status-codes
+
+    # Must have at least one tag
+    - type: javascript
+      value: |
+        const spec = JSON.parse(output);
+        return Array.isArray(spec.tags) && spec.tags.length > 0;
+      metric: has-tags
+
+tests:
+  - description: 'GET /users — paginated list with query filters'
+    vars:
+      fixture: fixtures/get-users.json
+    assert:
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          const paramNames = (spec.parameters ?? []).map(p => p.name);
+          return paramNames.includes('page') && paramNames.includes('limit');
+        metric: has-pagination-params
+
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          const params = spec.parameters ?? [];
+          return params.every(p => ['query','path','header','cookie'].includes(p.in));
+        metric: valid-param-location
+
+  - description: 'GET /users/:id — path param + 200 response'
+    vars:
+      fixture: fixtures/get-user-by-id.json
+    assert:
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          const pathParams = (spec.parameters ?? []).filter(p => p.in === 'path');
+          return pathParams.some(p => p.name === 'id' && p.required === true);
+        metric: has-required-path-param
+
+  - description: 'GET /users/:id — 404 error response'
+    vars:
+      fixture: fixtures/get-user-404.json
+    assert:
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          return '404' in spec.responses;
+        metric: documents-404
+
+  - description: 'POST /users — request body + 201 created'
+    vars:
+      fixture: fixtures/post-users.json
+    assert:
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          return spec.requestBody != null;
+        metric: has-request-body
+
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          return '201' in spec.responses;
+        metric: documents-201
+
+  - description: 'POST /auth/login — returns token'
+    vars:
+      fixture: fixtures/post-auth-login.json
+    assert:
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          return spec.requestBody != null;
+        metric: has-request-body
+
+      - type: llm-rubric
+        value: 'The spec summary or description should mention authentication, login, or credentials'
+        metric: describes-auth-purpose
+
+  - description: 'GET /me — bearer auth required'
+    vars:
+      fixture: fixtures/get-me-bearer.json
+    assert:
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          return Array.isArray(spec.security) && spec.security.length > 0;
+        metric: has-security-field
+
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          const schemes = (spec.security ?? []).flatMap(s => Object.keys(s));
+          return schemes.includes('bearerAuth');
+        metric: uses-bearer-auth
+
+  - description: 'GET /products — multiple query filters'
+    vars:
+      fixture: fixtures/get-products.json
+    assert:
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          const paramNames = (spec.parameters ?? []).map(p => p.name);
+          return paramNames.includes('category');
+        metric: has-category-param
+
+  - description: 'POST /orders — nested body + bearer auth'
+    vars:
+      fixture: fixtures/post-orders.json
+    assert:
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          return spec.requestBody != null;
+        metric: has-request-body
+
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          return Array.isArray(spec.security) && spec.security.length > 0;
+        metric: has-security-field
+
+  - description: 'DELETE /users/:id — 204 no content + bearer auth'
+    vars:
+      fixture: fixtures/delete-user.json
+    assert:
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          return '204' in spec.responses;
+        metric: documents-204
+
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          return spec.requestBody == null;
+        metric: no-request-body-on-delete
+
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          return Array.isArray(spec.security) && spec.security.length > 0;
+        metric: has-security-field

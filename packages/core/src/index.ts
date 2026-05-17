@@ -18,6 +18,7 @@ export {
   pgDeleteById,
   pgSaveManualSpec,
 } from './storage/postgres.js'
+export { buildOperation } from './spec/builder.js'
 export { OperationSchema } from './spec/schema.js'
 export type { Operation } from './spec/schema.js'
 export type { CaptureEvent, EasyDocsConfig, HttpMethod, AIConfig, StorageConfig } from './types.js'

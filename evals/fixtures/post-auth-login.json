@@ -1,0 +1,15 @@
+{
+  "method": "POST",
+  "path": "/auth/login",
+  "query": {},
+  "params": {},
+  "body": { "email": "alice@example.com", "password": "secret" },
+  "response": {
+    "token": "token-1",
+    "user": { "id": "1", "name": "Alice Smith", "email": "alice@example.com", "role": "admin" }
+  },
+  "status": 200,
+  "requestHeaders": { "content-type": "application/json", "accept": "application/json" },
+  "responseHeaders": { "content-type": "application/json" },
+  "durationMs": 42
+}

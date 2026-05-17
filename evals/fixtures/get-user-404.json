@@ -1,0 +1,12 @@
+{
+  "method": "GET",
+  "path": "/users/:id",
+  "query": {},
+  "params": { "id": "999" },
+  "body": null,
+  "response": { "error": "User not found" },
+  "status": 404,
+  "requestHeaders": { "accept": "application/json" },
+  "responseHeaders": { "content-type": "application/json" },
+  "durationMs": 4
+}

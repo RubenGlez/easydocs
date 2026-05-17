@@ -178,3 +178,9 @@ export async function resolveConflict(db: DB, id: string, keep: 'ai' | 'manual')
 export async function deleteEndpointById(db: DB, id: string) {
   await db.delete(endpoints).where(eq(endpoints.id, id))
 }
+
+export async function createTestDB() {
+  const client = createClient({ url: ':memory:' })
+  await client.executeMultiple(INIT_SQL)
+  return drizzle(client, { schema: { projects, endpoints } })
+}

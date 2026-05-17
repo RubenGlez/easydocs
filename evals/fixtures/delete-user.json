@@ -1,0 +1,12 @@
+{
+  "method": "DELETE",
+  "path": "/users/:id",
+  "query": {},
+  "params": { "id": "3" },
+  "body": null,
+  "response": null,
+  "status": 204,
+  "requestHeaders": { "authorization": "Bearer token-1" },
+  "responseHeaders": {},
+  "durationMs": 7
+}

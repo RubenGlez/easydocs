@@ -1,0 +1,18 @@
+{
+  "method": "GET",
+  "path": "/users/:id",
+  "query": {},
+  "params": { "id": "1" },
+  "body": null,
+  "response": {
+    "id": "1",
+    "name": "Alice Smith",
+    "email": "alice@example.com",
+    "role": "admin",
+    "createdAt": "2024-01-15T10:00:00Z"
+  },
+  "status": 200,
+  "requestHeaders": { "accept": "application/json" },
+  "responseHeaders": { "content-type": "application/json" },
+  "durationMs": 5
+}
