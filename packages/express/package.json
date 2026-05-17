@@ -1,6 +1,10 @@
 {
   "name": "@easydocs/express",
   "version": "0.1.1",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "description": "EasyDocs middleware for Express",
   "type": "module",
   "main": "./dist/index.cjs",

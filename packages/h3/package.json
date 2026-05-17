@@ -1,6 +1,10 @@
 {
   "name": "@easydocs/h3",
   "version": "0.1.1",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "description": "EasyDocs plugin for h3, Nitro, and Nuxt",
   "type": "module",
   "main": "./dist/index.cjs",

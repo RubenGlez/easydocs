@@ -36,6 +36,6 @@ jobs:
         run: pnpm test
 
       - name: Publish
-        run: pnpm publish -r --access public --no-git-checks
+        run: pnpm publish -r --access public --no-git-checks --filter './packages/*' --filter '@easydocs/dashboard'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

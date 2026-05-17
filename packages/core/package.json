@@ -1,6 +1,10 @@
 {
   "name": "@easydocs/core",
   "version": "0.1.1",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "description": "AI processing, storage, and spec building for EasyDocs",
   "type": "module",
   "main": "./dist/index.cjs",

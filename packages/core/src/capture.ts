@@ -16,6 +16,22 @@ import { maybeStartDashboard } from './dashboard.js'
 import type { CaptureEvent, EasyDocsConfig } from './types.js'
 
 const DEFAULT_PROJECT = 'default'
+let _aiKeyWarned = false
+
+function warnIfNoAIKey(config?: EasyDocsConfig) {
+  if (_aiKeyWarned) return
+  const provider = config?.ai?.provider
+  if (provider === 'ollama') return
+  const hasKey = config?.ai?.apiKey || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY
+  if (!hasKey) {
+    _aiKeyWarned = true
+    console.warn(
+      '\n[EasyDocs] No AI key found. Specs will not be generated.\n' +
+      '  Set OPENAI_API_KEY or ANTHROPIC_API_KEY in your environment,\n' +
+      '  or configure { ai: { provider: "ollama" } } to use a local model.\n'
+    )
+  }
+}
 
 type AnyDB = ReturnType<typeof createDB> | ReturnType<typeof createPgDB>
 
@@ -55,6 +71,7 @@ function shouldCapture(path: string, config?: EasyDocsConfig): boolean {
 
 export function capture(event: CaptureEvent, config?: EasyDocsConfig) {
   if (!shouldCapture(event.path, config)) return
+  warnIfNoAIKey(config)
 
   if (config?.dashboard?.autoStart === true) {
     maybeStartDashboard(config.dashboard.port ?? 4999).catch(() => {})

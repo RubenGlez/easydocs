@@ -1,6 +1,10 @@
 {
   "name": "@easydocs/nextjs",
   "version": "0.1.1",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "description": "EasyDocs handler wrapper for Next.js App Router and Pages Router",
   "type": "module",
   "main": "./dist/index.cjs",

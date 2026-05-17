@@ -1,6 +1,10 @@
 {
   "name": "@easydocs/nestjs",
   "version": "0.1.1",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "description": "EasyDocs module for NestJS",
   "type": "commonjs",
   "main": "./dist/index.js",

@@ -1,6 +1,10 @@
 {
   "name": "@easydocs/elysia",
   "version": "0.1.1",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "description": "EasyDocs plugin for Elysia (Bun)",
   "type": "module",
   "main": "./dist/index.cjs",

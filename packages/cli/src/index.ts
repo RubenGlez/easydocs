@@ -2,11 +2,18 @@ import { createDB, getAllEndpoints, getEndpointsByProject, findOrCreateProject }
 import { capture } from '@easydocs/core'
 import type { HttpMethod } from '@easydocs/core'
 import { createServer } from 'http'
+import { createRequire } from 'module'
+import { existsSync } from 'fs'
+import { join, dirname } from 'path'
+import { spawn } from 'child_process'
 import yaml from 'js-yaml'
 
 const [,, command, ...args] = process.argv
 
 switch (command) {
+  case 'dashboard':
+    await runDashboard(args)
+    break
   case 'export':
     await runExport(args)
     break
@@ -16,7 +23,7 @@ switch (command) {
     break
   default:
     console.error(
-      `Unknown command: ${command}\n\nUsage:\n  easydocs [proxy]           Start proxy server\n  easydocs export            Export spec to stdout\n\nFlags:\n  --project=<slug>           Scope to a project (default: all)\n  --port=<n>                 Port for proxy server (default: 3999)\n  --yaml                     Export as YAML instead of JSON`
+      `Unknown command: ${command}\n\nUsage:\n  easydocs [proxy]           Start proxy server\n  easydocs dashboard         Start the docs dashboard\n  easydocs export            Export spec to stdout\n\nFlags:\n  --project=<slug>           Scope to a project (default: all)\n  --port=<n>                 Port for proxy (default: 3999) or dashboard (default: 4999)\n  --yaml                     Export as YAML instead of JSON\n  --prod                     Dashboard: run next start instead of next dev`
     )
     process.exit(1)
 }
@@ -24,6 +31,69 @@ switch (command) {
 function getFlag(args: string[], name: string): string | undefined {
   const entry = args.find((a) => a.startsWith(`--${name}=`))
   return entry?.split('=').slice(1).join('=')
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+
+function findDashboardDir(): string | null {
+  // 1. Explicit env var
+  if (process.env.EASYDOCS_DASHBOARD_PATH) {
+    return process.env.EASYDOCS_DASHBOARD_PATH
+  }
+
+  // 2. @easydocs/dashboard installed in the user's project
+  try {
+    const req = createRequire(join(process.cwd(), 'package.json'))
+    const pkgPath = req.resolve('@easydocs/dashboard/package.json')
+    return dirname(pkgPath)
+  } catch { /* not installed */ }
+
+  // 3. Walk up from cwd — works inside the EasyDocs monorepo
+  let dir = process.cwd()
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) {
+      const candidate = join(dir, 'apps', 'dashboard')
+      if (existsSync(join(candidate, 'package.json'))) return candidate
+    }
+    const parent = dirname(dir)
+    if (parent === dir) break
+    dir = parent
+  }
+
+  return null
+}
+
+async function runDashboard(args: string[]) {
+  const port = parseInt(getFlag(args, 'port') ?? '4999', 10)
+  const prod = args.includes('--prod')
+
+  const dashboardDir = findDashboardDir()
+
+  if (!dashboardDir) {
+    console.error('[EasyDocs] Dashboard package not found.\n')
+    console.error('Install it:')
+    console.error('  npm install -D @easydocs/dashboard')
+    console.error('  pnpm add -D @easydocs/dashboard\n')
+    console.error('Then run:')
+    console.error('  npx easydocs dashboard')
+    console.error('\nOr set EASYDOCS_DASHBOARD_PATH to your dashboard directory.')
+    process.exit(1)
+  }
+
+  const nextBin = join(dashboardDir, 'node_modules', '.bin', 'next')
+  const cmd = existsSync(nextBin) ? nextBin : 'next'
+  const mode = prod ? ['start', '--port', String(port)] : ['dev', '--port', String(port)]
+
+  console.log(`[EasyDocs] Starting dashboard (${prod ? 'production' : 'dev'}) → http://localhost:${port}`)
+
+  const child = spawn(cmd, mode, {
+    cwd: dashboardDir,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+    env: { ...process.env, EASYDOCS_DB_URL: process.env.EASYDOCS_DB_URL },
+  })
+
+  child.on('exit', (code) => process.exit(code ?? 0))
 }
 
 // ─── Export ───────────────────────────────────────────────────────────────────
@@ -137,5 +207,6 @@ async function runProxy(args: string[]) {
   server.listen(port, () => {
     console.log(`[EasyDocs] Proxy → http://localhost:${port} (project: ${projectSlug})`)
     console.log(`[EasyDocs] Usage: http://localhost:${port}?target=https://api.example.com/users`)
+    console.log(`[EasyDocs] Dashboard: npx easydocs dashboard`)
   })
 }

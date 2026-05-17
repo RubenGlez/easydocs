@@ -1,29 +1,69 @@
 # EasyDocs
 
-**Add one line. Get OpenAPI docs for free.**
+**Add one line. Get OpenAPI docs from real traffic.**
 
-EasyDocs is a middleware-first API documentation tool. Add it to your server and it automatically generates accurate, up-to-date OpenAPI 3.0 specs from real traffic — no spec files to write, no annotations to maintain.
+EasyDocs watches your API traffic and uses AI to generate accurate, up-to-date OpenAPI 3.0 specs — automatically. No spec files to write, no annotations to maintain.
+
+## Two ways to get started
+
+### Option A — Zero code changes (proxy)
+
+Route your requests through the EasyDocs proxy. Nothing to install in your project.
+
+```bash
+npx @easydocs/cli proxy --project=my-api --port=3999
+```
+
+Then send requests through the proxy:
+
+```
+http://localhost:3999?target=https://api.example.com/users
+```
+
+### Option B — Middleware (one line)
+
+```bash
+npm install @easydocs/express
+```
 
 ```ts
 import { easydocs } from '@easydocs/express'
 
-app.use(easydocs())
-// your routes stay exactly the same
+app.use(easydocs({ project: 'my-api' }))
+// all your existing routes stay the same
 ```
 
-The docs dashboard runs at `http://localhost:4999`.
+---
+
+## View your docs
+
+```bash
+npm install -D @easydocs/dashboard
+npx easydocs dashboard
+# → http://localhost:4999
+```
+
+Or export to a file:
+
+```bash
+npx easydocs export > openapi.json
+npx easydocs export --yaml > openapi.yaml
+```
+
+---
 
 ## How it works
 
-1. EasyDocs middleware intercepts every request and response
-2. A background queue feeds the captured data to an AI model
-3. The AI generates or updates an OpenAPI 3.0 Operation spec
-4. The spec is stored in a local SQLite database
-5. The dashboard reads from that database and renders live docs
+1. Middleware (or proxy) intercepts every request and response
+2. A background queue feeds the captured data to an AI model — nothing blocks your request
+3. The AI generates or updates an OpenAPI 3.0 Operation object for that endpoint
+4. Response-shape hashing skips re-processing when the structure hasn't changed
+5. Specs are stored in SQLite (default) or Postgres
+6. The dashboard reads from that database and renders live docs
 
-Nothing blocks your request. The capture is fire-and-forget.
+---
 
-## Packages
+## Framework adapters
 
 | Package | Framework |
 |---------|-----------|
@@ -31,114 +71,78 @@ Nothing blocks your request. The capture is fire-and-forget.
 | [`@easydocs/fastify`](./packages/fastify) | Fastify |
 | [`@easydocs/hono`](./packages/hono) | Hono |
 | [`@easydocs/nestjs`](./packages/nestjs) | NestJS |
+| [`@easydocs/nextjs`](./packages/nextjs) | Next.js (App Router + Pages Router) |
+| [`@easydocs/h3`](./packages/h3) | h3 / Nitro / Nuxt |
+| [`@easydocs/elysia`](./packages/elysia) | Elysia (Bun) |
+| [`@easydocs/cli`](./packages/cli) | Proxy + export (no framework needed) |
 
-## Quick start
+---
 
-### Express
+## AI provider setup
 
-```bash
-npm install @easydocs/express
-```
-
-```ts
-import express from 'express'
-import { easydocs } from '@easydocs/express'
-
-const app = express()
-app.use(express.json())
-app.use(easydocs())
-```
-
-### Fastify
+Set one environment variable:
 
 ```bash
-npm install @easydocs/fastify
+# OpenAI (default)
+OPENAI_API_KEY=sk-...
+
+# Anthropic
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Ollama (local, no key needed)
+# configure in code: easydocs({ ai: { provider: 'ollama' } })
 ```
 
-```ts
-import Fastify from 'fastify'
-import { easydocs } from '@easydocs/fastify'
+EasyDocs auto-detects the provider from your environment. If neither key is set, it falls back to Ollama at `localhost:11434`.
 
-const app = Fastify()
-await app.register(easydocs)
-```
-
-### Hono
-
-```bash
-npm install @easydocs/hono
-```
-
-```ts
-import { Hono } from 'hono'
-import { easydocs } from '@easydocs/hono'
-
-const app = new Hono()
-app.use(easydocs())
-```
-
-### NestJS
-
-```bash
-npm install @easydocs/nestjs
-```
-
-```ts
-import { EasyDocsModule } from '@easydocs/nestjs'
-
-@Module({
-  imports: [EasyDocsModule.forRoot()],
-})
-export class AppModule {}
-```
+---
 
 ## Configuration
 
 ```ts
 easydocs({
+  project: 'my-api',          // separate spec per service, default: 'default'
   ai: {
     provider: 'openai',       // 'openai' | 'anthropic' | 'ollama'
-    model: 'gpt-4o',          // optional, sensible defaults per provider
+    model: 'gpt-4o',
     apiKey: '...',            // optional, falls back to env vars
   },
   storage: {
-    url: 'file:./docs.sqlite', // optional, defaults to ~/.easydocs/db.sqlite
+    type: 'sqlite',           // 'sqlite' | 'postgres'
+    url: 'file:./docs.sqlite',
   },
   capture: {
     ignoreRoutes: ['/health', '/metrics'],
+    includePaths: ['/api'],
   },
   dashboard: {
-    autoStart: true,           // spawn dashboard server on first capture (dev only)
+    autoStart: true,          // spawn dashboard on first capture (dev only)
     port: 4999,
   },
 })
 ```
 
-### AI provider detection
+---
 
-EasyDocs auto-detects the provider from environment variables:
+## Multiple projects
 
-| Env var | Provider used |
-|---------|---------------|
-| `ANTHROPIC_API_KEY` | Anthropic Claude |
-| `OPENAI_API_KEY` | OpenAI GPT |
-| neither | Ollama (localhost:11434) |
+Scope traffic from different services to separate specs:
 
-Set `ai.provider` in config to override.
-
-## Dashboard
-
-The dashboard is a Next.js app at `apps/dashboard`, served on port 4999.
-
-**Run manually:**
-```bash
-pnpm --filter @easydocs/dashboard dev
-```
-
-**Auto-start on first capture:**
 ```ts
-easydocs({ dashboard: { autoStart: true } })
+// service-a
+app.use(easydocs({ project: 'users-service' }))
+
+// service-b
+app.use(easydocs({ project: 'orders-service' }))
 ```
+
+Switch between projects in the dashboard or scope the export:
+
+```bash
+npx easydocs export --project=users-service > users.json
+```
+
+---
 
 ## Repository structure
 
@@ -149,14 +153,20 @@ packages/
   fastify/    ← @easydocs/fastify
   hono/       ← @easydocs/hono
   nestjs/     ← @easydocs/nestjs
+  nextjs/     ← @easydocs/nextjs
+  h3/         ← @easydocs/h3
+  elysia/     ← @easydocs/elysia
+  cli/        ← @easydocs/cli
 apps/
-  dashboard/  ← docs UI (port 4999)
+  dashboard/  ← @easydocs/dashboard (docs UI)
+  test-api/   ← fixture Express app for testing
+evals/        ← promptfoo eval harness for AI spec quality
 docs/
   ARCHITECTURE.md
+  CICD.md
   MISSION.md
   ROADMAP.md
   STACK.md
-  adr/        ← architecture decision records
 ```
 
 ## Development
@@ -165,12 +175,17 @@ docs/
 pnpm install
 pnpm dev        # runs all packages and dashboard in parallel
 pnpm build      # builds all packages
-pnpm typecheck  # type checks all packages
+pnpm test       # runs integration tests
+pnpm eval       # runs AI spec quality evals (requires API key)
 ```
 
-## Contributing
+## Release
 
-See [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md).
+```bash
+pnpm release           # patch bump → tag → publish
+pnpm release:minor     # minor bump
+pnpm release:major     # major bump
+```
 
 ## License
 

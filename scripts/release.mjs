@@ -50,9 +50,10 @@ console.log(`Bumping ${current} → ${next} (${bump})`)
 rootPkg.version = next
 writeJson(rootPkgPath, rootPkg)
 
-const pkgPaths = readdirSync(resolve(root, 'packages')).map((name) =>
-  join('packages', name, 'package.json')
-)
+const pkgPaths = [
+  ...readdirSync(resolve(root, 'packages')).map((name) => join('packages', name, 'package.json')),
+  join('apps', 'dashboard', 'package.json'),
+]
 
 for (const rel of pkgPaths) {
   const path = resolve(root, rel)

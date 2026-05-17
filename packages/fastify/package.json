@@ -1,6 +1,10 @@
 {
   "name": "@easydocs/fastify",
   "version": "0.1.1",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "description": "EasyDocs plugin for Fastify",
   "type": "module",
   "main": "./dist/index.cjs",

@@ -1,7 +1,15 @@
 {
   "name": "@easydocs/dashboard",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.1.1",
+  "description": "EasyDocs docs dashboard — view and export AI-generated OpenAPI specs",
+  "files": [
+    "src",
+    "public",
+    "next.config.ts",
+    "tailwind.config.ts",
+    "postcss.config.mjs",
+    "tsconfig.json"
+  ],
   "scripts": {
     "dev": "next dev --port 4999",
     "build": "next build",

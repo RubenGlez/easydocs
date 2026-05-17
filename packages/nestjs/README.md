@@ -52,3 +52,15 @@ EasyDocsModule.forRoot({
   },
 })
 ```
+
+## View your docs
+
+```bash
+npm install -D @easydocs/dashboard
+npx easydocs dashboard
+
+# Or export to a file
+npx easydocs export > openapi.json
+```
+
+See [@easydocs/core](../core) for the full configuration reference.
