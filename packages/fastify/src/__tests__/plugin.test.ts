@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import Fastify from 'fastify'
 import { easydocs } from '../index.js'
 
-vi.mock('@easydocs/core', () => ({ capture: vi.fn() }))
+vi.mock(import('@easydocs/core'), async (importOriginal) => {
+  const actual = await importOriginal()
+  return { ...actual, capture: vi.fn() }
+})
 
 const { capture } = await import('@easydocs/core')
 

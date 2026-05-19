@@ -3,7 +3,10 @@ import express from 'express'
 import request from 'supertest'
 import { easydocs } from '../index.js'
 
-vi.mock('@easydocs/core', () => ({ capture: vi.fn() }))
+vi.mock(import('@easydocs/core'), async (importOriginal) => {
+  const actual = await importOriginal()
+  return { ...actual, capture: vi.fn() }
+})
 
 const { capture } = await import('@easydocs/core')
 
@@ -24,7 +27,7 @@ describe('express middleware', () => {
     await request(makeApp()).get('/users')
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ method: 'GET', path: '/users', status: 200 }),
-      undefined
+      {}
     )
   })
 
@@ -32,7 +35,7 @@ describe('express middleware', () => {
     await request(makeApp()).get('/users?page=2&limit=10')
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ query: { page: '2', limit: '10' } }),
-      undefined
+      {}
     )
   })
 
@@ -40,7 +43,7 @@ describe('express middleware', () => {
     await request(makeApp()).get('/users/42')
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ params: { id: '42' } }),
-      undefined
+      {}
     )
   })
 
@@ -48,7 +51,7 @@ describe('express middleware', () => {
     await request(makeApp()).post('/users').send({ name: 'Alice' })
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ method: 'POST', body: { name: 'Alice' }, status: 201 }),
-      undefined
+      {}
     )
   })
 
@@ -56,7 +59,7 @@ describe('express middleware', () => {
     await request(makeApp()).get('/users')
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ response: { data: [] } }),
-      undefined
+      {}
     )
   })
 

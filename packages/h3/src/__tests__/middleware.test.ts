@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createApp, createRouter, defineEventHandler, toWebHandler, readBody, getQuery } from 'h3'
 import { easydocs } from '../index.js'
 
-vi.mock('@easydocs/core', () => ({ capture: vi.fn() }))
+vi.mock(import('@easydocs/core'), async (importOriginal) => {
+  const actual = await importOriginal()
+  return { ...actual, capture: vi.fn() }
+})
 
 const { capture } = await import('@easydocs/core')
 
@@ -27,7 +30,7 @@ describe('h3 middleware', () => {
     await makeHandler()(new Request('http://localhost/users'))
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ method: 'GET', status: 200 }),
-      undefined
+      {}
     )
   })
 
@@ -35,7 +38,7 @@ describe('h3 middleware', () => {
     await makeHandler()(new Request('http://localhost/users?page=2&limit=10'))
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ query: { page: '2', limit: '10' } }),
-      undefined
+      {}
     )
   })
 
@@ -45,7 +48,7 @@ describe('h3 middleware', () => {
     // just assert capture was called with the correct method/path/status
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ method: 'GET', path: '/users', status: 200 }),
-      undefined
+      {}
     )
   })
 
@@ -57,7 +60,7 @@ describe('h3 middleware', () => {
     }))
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ method: 'POST', body: { name: 'Alice' } }),
-      undefined
+      {}
     )
   })
 

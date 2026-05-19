@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { of } from 'rxjs'
 import { EasyDocsInterceptor } from '../interceptor.js'
 
-vi.mock('@easydocs/core', () => ({ capture: vi.fn() }))
+vi.mock(import('@easydocs/core'), async (importOriginal) => {
+  const actual = await importOriginal()
+  return { ...actual, capture: vi.fn() }
+})
 
 import { capture } from '@easydocs/core'
 

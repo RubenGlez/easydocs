@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Hono } from 'hono'
 import { easydocs } from '../index.js'
 
-vi.mock('@easydocs/core', () => ({ capture: vi.fn() }))
+vi.mock(import('@easydocs/core'), async (importOriginal) => {
+  const actual = await importOriginal()
+  return { ...actual, capture: vi.fn() }
+})
 
 const { capture } = await import('@easydocs/core')
 
@@ -22,7 +25,7 @@ describe('hono middleware', () => {
     await makeApp().request('/users')
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ method: 'GET', status: 200 }),
-      undefined
+      {}
     )
   })
 
@@ -30,7 +33,7 @@ describe('hono middleware', () => {
     await makeApp().request('/users?page=2&limit=10')
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ query: { page: '2', limit: '10' } }),
-      undefined
+      {}
     )
   })
 
@@ -38,7 +41,7 @@ describe('hono middleware', () => {
     await makeApp().request('/users/42')
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ params: { id: '42' } }),
-      undefined
+      {}
     )
   })
 
@@ -46,7 +49,7 @@ describe('hono middleware', () => {
     await makeApp().request('/users')
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ response: { data: [] } }),
-      undefined
+      {}
     )
   })
 
@@ -58,7 +61,7 @@ describe('hono middleware', () => {
     })
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ method: 'POST', body: { name: 'Alice' }, status: 201 }),
-      undefined
+      {}
     )
   })
 

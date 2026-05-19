@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Elysia } from 'elysia'
 import { easydocs } from '../index.js'
 
-vi.mock('@easydocs/core', () => ({ capture: vi.fn() }))
+vi.mock(import('@easydocs/core'), async (importOriginal) => {
+  const actual = await importOriginal()
+  return { ...actual, capture: vi.fn() }
+})
 
 const { capture } = await import('@easydocs/core')
 
@@ -21,7 +24,7 @@ describe('elysia plugin', () => {
     await makeApp().handle(new Request('http://localhost/users'))
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ method: 'GET', path: '/users', status: 200 }),
-      undefined
+      {}
     )
   })
 
@@ -29,7 +32,7 @@ describe('elysia plugin', () => {
     await makeApp().handle(new Request('http://localhost/users?page=2&limit=10'))
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ query: { page: '2', limit: '10' } }),
-      undefined
+      {}
     )
   })
 
@@ -37,7 +40,7 @@ describe('elysia plugin', () => {
     await makeApp().handle(new Request('http://localhost/users/42'))
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ params: { id: '42' } }),
-      undefined
+      {}
     )
   })
 
@@ -45,7 +48,7 @@ describe('elysia plugin', () => {
     await makeApp().handle(new Request('http://localhost/users'))
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ response: { data: [] } }),
-      undefined
+      {}
     )
   })
 
