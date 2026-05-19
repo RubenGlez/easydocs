@@ -6,7 +6,7 @@ import { json } from '@codemirror/lang-json'
 import { oneDark } from '@codemirror/theme-one-dark'
 import type { Endpoint } from '@easydocs/core/schema'
 import type { Operation } from '@easydocs/core'
-import { OperationSchema } from '@/lib/operation-schema'
+import { OperationSchema } from '@easydocs/core'
 
 interface Props {
   endpoint: Endpoint

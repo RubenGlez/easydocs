@@ -1,4 +1,4 @@
-import { createDB, getAllEndpoints, getEndpointsByProject, findOrCreateProject } from '@easydocs/core'
+import { createDB, getAllEndpoints, getEndpointsByProject, findOrCreateProject, buildFullSpec } from '@easydocs/core'
 import { capture } from '@easydocs/core'
 import type { HttpMethod } from '@easydocs/core'
 import { createServer } from 'http'
@@ -111,18 +111,7 @@ async function runExport(args: string[]) {
     endpoints = await getAllEndpoints(db)
   }
 
-  const spec = {
-    openapi: '3.0.3',
-    info: { title: projectSlug ?? 'API Documentation', version: '1.0.0' },
-    paths: endpoints.reduce<Record<string, Record<string, unknown>>>((acc, e) => {
-      if (!e.path || !e.method) return acc
-      const activeSpec = e.isManuallyEdited && e.manualSpec ? e.manualSpec : e.spec
-      if (!activeSpec) return acc
-      if (!acc[e.path]) acc[e.path] = {}
-      acc[e.path][e.method.toLowerCase()] = activeSpec
-      return acc
-    }, {}),
-  }
+  const spec = buildFullSpec(endpoints, projectSlug ?? undefined)
 
   process.stdout.write(format === 'yaml' ? yaml.dump(spec) : JSON.stringify(spec, null, 2))
 }
