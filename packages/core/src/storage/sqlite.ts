@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm'
 import { endpoints, projects } from './schema.js'
 import type { Operation } from '../spec/schema.js'
 import type { HttpMethod } from '../types.js'
+import type { DatabaseAdapter } from './adapter.js'
 import os from 'os'
 import path from 'path'
 import { mkdirSync } from 'fs'
@@ -181,4 +182,30 @@ export async function createTestDB() {
   const client = createClient({ url: ':memory:' })
   await client.executeMultiple(INIT_SQL)
   return drizzle(client, { schema: { projects, endpoints } })
+}
+
+// ─── Adapter ─────────────────────────────────────────────────────────────────
+
+function wrapDB(db: DB): DatabaseAdapter {
+  return {
+    findOrCreateProject: (slug) => findOrCreateProject(db, slug),
+    getEndpointByPathMethod: (projectId, path, method) =>
+      getEndpointByPathMethod(db, projectId, path, method),
+    upsertEndpoint: (projectId, path, method, spec, responseHash) =>
+      upsertEndpoint(db, projectId, path, method, spec, responseHash),
+    getAllProjects: () => getAllProjects(db),
+    getAllEndpoints: () => getAllEndpoints(db),
+    getEndpointsByProject: (projectId) => getEndpointsByProject(db, projectId),
+    deleteEndpointById: (id) => deleteEndpointById(db, id),
+    saveManualSpec: (id, manualSpec) => saveManualSpec(db, id, manualSpec),
+    resolveConflict: (id, keep) => resolveConflict(db, id, keep),
+  }
+}
+
+export function createSqliteAdapter(url?: string): DatabaseAdapter {
+  return wrapDB(createDB(url))
+}
+
+export async function createTestAdapter(): Promise<DatabaseAdapter> {
+  return wrapDB(await createTestDB())
 }

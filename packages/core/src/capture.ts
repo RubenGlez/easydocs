@@ -1,17 +1,7 @@
 import { globalQueue } from './queue.js'
 import { buildOperation } from './spec/builder.js'
-import {
-  createDB,
-  upsertEndpoint,
-  getEndpointByPathMethod,
-  findOrCreateProject,
-} from './storage/sqlite.js'
-import {
-  createPgDB,
-  pgUpsertEndpoint,
-  pgGetByPathMethod,
-  pgFindOrCreateProject,
-} from './storage/postgres.js'
+import { createAdapter } from './storage/adapter.js'
+import type { DatabaseAdapter } from './storage/adapter.js'
 import { maybeStartDashboard } from './dashboard.js'
 import type { CaptureEvent, EasyDocsConfig } from './types.js'
 
@@ -37,18 +27,13 @@ function warnIfNoAIKey(config?: EasyDocsConfig) {
   }
 }
 
-type AnyDB = ReturnType<typeof createDB> | ReturnType<typeof createPgDB>
+let _adapter: DatabaseAdapter | null = null
 
-let db: AnyDB | null = null
-
-function getDB(config?: EasyDocsConfig): AnyDB {
-  if (!db) {
-    db =
-      config?.storage?.type === 'postgres' && config.storage.url
-        ? createPgDB(config.storage.url, config.storage.poolSize)
-        : createDB(config?.storage?.url)
+function getAdapter(config?: EasyDocsConfig): DatabaseAdapter {
+  if (!_adapter) {
+    _adapter = createAdapter(config?.storage)
   }
-  return db
+  return _adapter
 }
 
 function hashShape(value: unknown): string {
@@ -82,52 +67,17 @@ export function capture(event: CaptureEvent, config?: EasyDocsConfig) {
   }
 
   const projectSlug = config?.project ?? DEFAULT_PROJECT
-  const isPostgres = config?.storage?.type === 'postgres'
 
   globalQueue.add(async () => {
-    const database = getDB(config)
+    const adapter = getAdapter(config)
     const responseHash = hashShape(event.response)
 
-    const projectId = isPostgres
-      ? await pgFindOrCreateProject(database as ReturnType<typeof createPgDB>, projectSlug)
-      : await findOrCreateProject(database as ReturnType<typeof createDB>, projectSlug)
-
-    const existing = isPostgres
-      ? await pgGetByPathMethod(
-          database as ReturnType<typeof createPgDB>,
-          projectId,
-          event.path,
-          event.method
-        )
-      : await getEndpointByPathMethod(
-          database as ReturnType<typeof createDB>,
-          projectId,
-          event.path,
-          event.method
-        )
+    const projectId = await adapter.findOrCreateProject(projectSlug)
+    const existing = await adapter.getEndpointByPathMethod(projectId, event.path, event.method)
 
     if (existing?.responseHash === responseHash && existing?.spec) return
 
     const spec = await buildOperation(event, existing?.spec ?? null, config?.ai)
-
-    if (isPostgres) {
-      await pgUpsertEndpoint(
-        database as ReturnType<typeof createPgDB>,
-        projectId,
-        event.path,
-        event.method,
-        spec,
-        responseHash
-      )
-    } else {
-      await upsertEndpoint(
-        database as ReturnType<typeof createDB>,
-        projectId,
-        event.path,
-        event.method,
-        spec,
-        responseHash
-      )
-    }
+    await adapter.upsertEndpoint(projectId, event.path, event.method, spec, responseHash)
   })
 }

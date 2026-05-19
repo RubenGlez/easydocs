@@ -4,6 +4,8 @@ import { and, eq } from 'drizzle-orm'
 import { pgTable, uuid, text, jsonb, timestamp, boolean } from 'drizzle-orm/pg-core'
 import type { Operation } from '../spec/schema.js'
 import type { HttpMethod } from '../types.js'
+import type { DatabaseAdapter } from './adapter.js'
+import type { Endpoint, Project } from './schema.js'
 
 export const pgProjects = pgTable('projects', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -163,4 +165,58 @@ export async function pgSaveManualSpec(db: PgDB, id: string, manualSpec: Operati
     .update(pgEndpoints)
     .set({ manualSpec, isManuallyEdited: true, hasConflict: false, updatedAt: new Date() })
     .where(eq(pgEndpoints.id, id))
+}
+
+export async function pgResolveConflict(db: PgDB, id: string, keep: 'ai' | 'manual') {
+  if (keep === 'ai') {
+    await db
+      .update(pgEndpoints)
+      .set({ manualSpec: null, isManuallyEdited: false, hasConflict: false, updatedAt: new Date() })
+      .where(eq(pgEndpoints.id, id))
+  } else {
+    const row = await db.select().from(pgEndpoints).where(eq(pgEndpoints.id, id)).limit(1).then((r) => r[0])
+    if (!row?.manualSpec) return
+    await db
+      .update(pgEndpoints)
+      .set({ spec: row.manualSpec, manualSpec: null, isManuallyEdited: true, hasConflict: false, updatedAt: new Date() })
+      .where(eq(pgEndpoints.id, id))
+  }
+}
+
+// ─── Adapter ─────────────────────────────────────────────────────────────────
+
+function toEndpoint(row: typeof pgEndpoints.$inferSelect): Endpoint {
+  return row as unknown as Endpoint
+}
+
+function toProject(row: typeof pgProjects.$inferSelect): Project {
+  return row as unknown as Project
+}
+
+export function createPostgresAdapter(url: string, poolSize?: number): DatabaseAdapter {
+  const db = createPgDB(url, poolSize)
+  return {
+    findOrCreateProject: (slug) => pgFindOrCreateProject(db, slug),
+    getEndpointByPathMethod: async (projectId, path, method) => {
+      const row = await pgGetByPathMethod(db, projectId, path, method)
+      return row ? toEndpoint(row) : undefined
+    },
+    upsertEndpoint: (projectId, path, method, spec, responseHash) =>
+      pgUpsertEndpoint(db, projectId, path, method, spec, responseHash),
+    getAllProjects: async () => {
+      const rows = await pgGetAllProjects(db)
+      return rows.map(toProject)
+    },
+    getAllEndpoints: async () => {
+      const rows = await pgGetAll(db)
+      return rows.map(toEndpoint)
+    },
+    getEndpointsByProject: async (projectId) => {
+      const rows = await pgGetEndpointsByProject(db, projectId)
+      return rows.map(toEndpoint)
+    },
+    deleteEndpointById: (id) => pgDeleteById(db, id),
+    saveManualSpec: (id, manualSpec) => pgSaveManualSpec(db, id, manualSpec),
+    resolveConflict: (id, keep) => pgResolveConflict(db, id, keep),
+  }
 }
