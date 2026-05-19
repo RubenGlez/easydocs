@@ -1,4 +1,4 @@
-import { capture } from '@easydocs/core'
+import { capture, parseConfig } from '@easydocs/core'
 import type { EasyDocsConfig, HttpMethod } from '@easydocs/core'
 import {
   defineEventHandler,
@@ -18,6 +18,7 @@ declare module 'h3' {
 }
 
 export function easydocs(config?: EasyDocsConfig): EventHandler {
+  const parsedConfig = parseConfig(config)
   return defineEventHandler({
     onRequest(event: H3Event) {
       event.context._easydocsStart = Date.now()
@@ -51,7 +52,7 @@ export function easydocs(config?: EasyDocsConfig): EventHandler {
           ),
           durationMs: Date.now() - (event.context._easydocsStart ?? Date.now()),
         },
-        config
+        parsedConfig
       )
     },
 

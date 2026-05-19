@@ -1,8 +1,9 @@
-import { capture } from '@easydocs/core'
+import { capture, parseConfig } from '@easydocs/core'
 import type { EasyDocsConfig } from '@easydocs/core'
 import type { Request, Response, NextFunction } from 'express'
 
 export function easydocs(config?: EasyDocsConfig) {
+  const parsedConfig = parseConfig(config)
   return function easydocsMiddleware(req: Request, res: Response, next: NextFunction) {
     const startedAt = Date.now()
     const originalJson = res.json.bind(res)
@@ -21,7 +22,7 @@ export function easydocs(config?: EasyDocsConfig) {
           responseHeaders: res.getHeaders() as Record<string, string>,
           durationMs: Date.now() - startedAt,
         },
-        config
+        parsedConfig
       )
       return originalJson(body)
     }

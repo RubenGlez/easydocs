@@ -1,8 +1,9 @@
-import { capture } from '@easydocs/core'
+import { capture, parseConfig } from '@easydocs/core'
 import type { EasyDocsConfig, HttpMethod } from '@easydocs/core'
 import type { Context, Next } from 'hono'
 
 export function easydocs(config?: EasyDocsConfig) {
+  const parsedConfig = parseConfig(config)
   return async function easydocsMiddleware(c: Context, next: Next) {
     const startedAt = Date.now()
     await next()
@@ -37,7 +38,7 @@ export function easydocs(config?: EasyDocsConfig) {
         responseHeaders: Object.fromEntries(c.res.headers.entries()),
         durationMs: Date.now() - startedAt,
       },
-      config
+      parsedConfig
     )
   }
 }

@@ -1,4 +1,4 @@
-import { capture } from '@easydocs/core'
+import { capture, parseConfig } from '@easydocs/core'
 import type { EasyDocsConfig, HttpMethod } from '@easydocs/core'
 
 // ─── Local structural types (avoid importing from next at build time) ──────────
@@ -35,6 +35,7 @@ type AppRouterContext = { params?: Promise<Record<string, string>> | Record<stri
 type AppRouterHandler = (req: NextRequestLike, ctx?: AppRouterContext) => Promise<Response> | Response
 
 export function withEasydocs(handler: AppRouterHandler, config?: EasyDocsConfig): AppRouterHandler {
+  const parsedConfig = parseConfig(config)
   return async (req, ctx) => {
     const startedAt = Date.now()
     const response = await handler(req, ctx)
@@ -74,7 +75,7 @@ export function withEasydocs(handler: AppRouterHandler, config?: EasyDocsConfig)
         responseHeaders: Object.fromEntries(response.headers.entries()),
         durationMs: Date.now() - startedAt,
       },
-      config
+      parsedConfig
     )
 
     return response
@@ -89,6 +90,7 @@ export function withEasydocsPagesHandler(
   handler: PagesHandler,
   config?: EasyDocsConfig
 ): PagesHandler {
+  const parsedConfig = parseConfig(config)
   return async (req, res) => {
     const startedAt = Date.now()
     const originalJson = res.json.bind(res)
@@ -107,7 +109,7 @@ export function withEasydocsPagesHandler(
           responseHeaders: res.getHeaders() as Record<string, string>,
           durationMs: Date.now() - startedAt,
         },
-        config
+        parsedConfig
       )
       return originalJson(body)
     }

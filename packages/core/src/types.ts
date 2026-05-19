@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 export interface CaptureEvent {
@@ -13,34 +15,51 @@ export interface CaptureEvent {
   durationMs: number
 }
 
-export interface AIConfig {
-  provider?: 'openai' | 'anthropic' | 'ollama' | 'deepseek'
-  model?: string
-  apiKey?: string
-  baseUrl?: string
-}
+const AIConfigSchema = z.object({
+  provider: z.enum(['openai', 'anthropic', 'ollama', 'deepseek']).optional(),
+  model: z.string().optional(),
+  apiKey: z.string().optional(),
+  baseUrl: z.string().optional(),
+}).strict()
 
-export interface StorageConfig {
-  type?: 'sqlite' | 'postgres'
-  url?: string
-  poolSize?: number
-}
+const StorageConfigSchema = z.object({
+  type: z.enum(['sqlite', 'postgres']).optional(),
+  url: z.string().optional(),
+  poolSize: z.number().int().positive().optional(),
+}).strict()
 
-export interface DashboardConfig {
-  port?: number
-  autoStart?: boolean
-}
+const DashboardConfigSchema = z.object({
+  port: z.number().int().min(1).max(65535).optional(),
+  autoStart: z.boolean().optional(),
+}).strict()
 
-export interface CaptureConfig {
-  ignoreRoutes?: string[]
-  includePaths?: string[]
-  maxBodySize?: number
-}
+const CaptureConfigSchema = z.object({
+  ignoreRoutes: z.array(z.string()).optional(),
+  includePaths: z.array(z.string()).optional(),
+  maxBodySize: z.number().int().positive().optional(),
+}).strict()
 
-export interface EasyDocsConfig {
-  project?: string
-  ai?: AIConfig
-  storage?: StorageConfig
-  dashboard?: DashboardConfig
-  capture?: CaptureConfig
+export const EasyDocsConfigSchema = z.object({
+  project: z.string().min(1).optional(),
+  ai: AIConfigSchema.optional(),
+  storage: StorageConfigSchema.optional(),
+  dashboard: DashboardConfigSchema.optional(),
+  capture: CaptureConfigSchema.optional(),
+}).strict()
+
+export type AIConfig = z.infer<typeof AIConfigSchema>
+export type StorageConfig = z.infer<typeof StorageConfigSchema>
+export type DashboardConfig = z.infer<typeof DashboardConfigSchema>
+export type CaptureConfig = z.infer<typeof CaptureConfigSchema>
+export type EasyDocsConfig = z.infer<typeof EasyDocsConfigSchema>
+
+export function parseConfig(config?: unknown): EasyDocsConfig {
+  const result = EasyDocsConfigSchema.safeParse(config ?? {})
+  if (!result.success) {
+    const messages = result.error.issues
+      .map((i) => `  ${i.path.join('.')}: ${i.message}`)
+      .join('\n')
+    throw new Error(`[EasyDocs] Invalid configuration:\n${messages}`)
+  }
+  return result.data
 }

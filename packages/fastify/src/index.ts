@@ -1,9 +1,10 @@
-import { capture } from '@easydocs/core'
+import { capture, parseConfig } from '@easydocs/core'
 import type { EasyDocsConfig, HttpMethod } from '@easydocs/core'
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify'
 import fp from 'fastify-plugin'
 
-const plugin: FastifyPluginAsync<EasyDocsConfig> = async (fastify, config) => {
+const plugin: FastifyPluginAsync<EasyDocsConfig> = async (fastify, rawConfig) => {
+  const config = parseConfig(rawConfig)
   fastify.addHook(
     'onSend',
     async (request: FastifyRequest, reply: FastifyReply, payload: unknown) => {

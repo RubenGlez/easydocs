@@ -1,8 +1,9 @@
-import { capture } from '@easydocs/core'
+import { capture, parseConfig } from '@easydocs/core'
 import type { EasyDocsConfig, HttpMethod } from '@easydocs/core'
 import { Elysia } from 'elysia'
 
 export function easydocs(config?: EasyDocsConfig) {
+  const parsedConfig = parseConfig(config)
   return new Elysia({ name: '@easydocs/elysia' }).onAfterHandle(
     { as: 'global' },
     async ({ request, response, set, path, params, query, body }) => {
@@ -36,7 +37,7 @@ export function easydocs(config?: EasyDocsConfig) {
               : (set.headers as Record<string, string>) ?? {},
           durationMs: 0,
         },
-        config
+        parsedConfig
       )
     }
   )
