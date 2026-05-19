@@ -2,6 +2,7 @@ import { globalQueue } from './queue.js'
 import { buildOperation } from './spec/builder.js'
 import { createAdapter } from './storage/adapter.js'
 import type { DatabaseAdapter } from './storage/adapter.js'
+import { hashShape } from './shape.js'
 import { maybeStartDashboard } from './dashboard.js'
 import type { CaptureEvent, EasyDocsConfig } from './types.js'
 
@@ -36,20 +37,6 @@ function getAdapter(config?: EasyDocsConfig): DatabaseAdapter {
   return _adapter
 }
 
-function hashShape(value: unknown): string {
-  return JSON.stringify(extractShape(value))
-}
-
-function extractShape(value: unknown): unknown {
-  if (value === null || value === undefined) return typeof value
-  if (Array.isArray(value)) return [extractShape(value[0])]
-  if (typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, extractShape(v)])
-    )
-  }
-  return typeof value
-}
 
 function shouldCapture(path: string, config?: EasyDocsConfig): boolean {
   const { ignoreRoutes, includePaths } = config?.capture ?? {}
