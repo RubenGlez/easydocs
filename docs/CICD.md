@@ -22,7 +22,7 @@ pnpm release:minor     # minor bump
 pnpm release:major     # major bump
 ```
 
-Runs the same checks as CI first (build → lint → typecheck → test), then publishes all packages to npm.
+Runs build → typecheck → test, then publishes all packages to npm. (Lint is skipped in the publish job — it runs in CI on the PR.)
 
 **Required secret:** `NPM_TOKEN`
 - Generate at npmjs.com → Access Tokens → Automation token
@@ -56,7 +56,7 @@ jobs:
       - run: pnpm --filter './packages/*' build
       - run: pnpm eval
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
       - uses: actions/upload-artifact@v4
         with:
           name: eval-results

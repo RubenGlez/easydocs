@@ -54,7 +54,7 @@ pnpm eval
 2. Update `packages/core/src/ai/provider.ts` — add the provider to `detectProvider()` and the `switch` in `resolveModel()`
 3. Update the `AIConfigSchema` in `packages/core/src/types.ts` to include the new provider name in the `provider` enum
 4. Add a test with a mocked provider response
-5. Update `docs/STACK.md` and `docs/adr/0004-multi-provider-ai.md`
+5. Update `docs/adr/0004-multi-provider-ai.md`
 
 ## Architecture Decisions
 
