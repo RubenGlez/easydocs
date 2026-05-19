@@ -139,7 +139,7 @@ export function Dashboard({ endpoints, projects, currentProject }: Props) {
       {/* Main */}
       <main className="flex-1 overflow-hidden">
         {selected ? (
-          <EndpointDetail endpoint={selected} />
+          <EndpointDetail key={selected.id} endpoint={selected} />
         ) : (
           <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
             Select an endpoint to view its documentation.
