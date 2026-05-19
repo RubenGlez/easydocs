@@ -6,6 +6,7 @@ import type { Operation } from '../spec/schema.js'
 import type { HttpMethod } from '../types.js'
 import os from 'os'
 import path from 'path'
+import { mkdirSync } from 'fs'
 
 export type DB = ReturnType<typeof createDB>
 
@@ -47,10 +48,7 @@ function ensureDir(url: string) {
   if (url.startsWith('file:')) {
     const filePath = url.slice('file:'.length)
     const dir = path.dirname(filePath)
-    try {
-      const { mkdirSync } = require('fs') as typeof import('fs')
-      mkdirSync(dir, { recursive: true })
-    } catch { /* already exists */ }
+    mkdirSync(dir, { recursive: true })
   }
 }
 
