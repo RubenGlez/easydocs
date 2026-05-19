@@ -20,7 +20,9 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "test": "vitest run"
   },
   "dependencies": {
     "@easydocs/core": "workspace:*"
@@ -31,6 +33,7 @@
   "devDependencies": {
     "h3": "^1.13.0",
     "tsup": "^8.3.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.9"
   }
 }

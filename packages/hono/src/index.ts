@@ -14,6 +14,13 @@ export function easydocs(config?: EasyDocsConfig) {
       responseBody = null
     }
 
+    let requestBody: unknown = null
+    try {
+      requestBody = await c.req.raw.clone().json()
+    } catch {
+      requestBody = null
+    }
+
     const url = new URL(c.req.url)
     const routePath = c.req.routePath ?? url.pathname
 
@@ -23,7 +30,7 @@ export function easydocs(config?: EasyDocsConfig) {
         path: routePath,
         query: Object.fromEntries(url.searchParams.entries()),
         params: c.req.param() as Record<string, string>,
-        body: await c.req.raw.clone().json().catch(() => null),
+        body: requestBody,
         response: responseBody,
         status: c.res.status,
         requestHeaders: Object.fromEntries(c.req.raw.headers.entries()),
