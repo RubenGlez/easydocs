@@ -18,7 +18,7 @@ Use the **Vercel AI SDK** as the AI abstraction layer. It provides a consistent 
 ```ts
 easydocs({
   ai: {
-    provider: 'openai',      // 'openai' | 'anthropic' | 'ollama'
+    provider: 'openai',      // 'openai' | 'anthropic' | 'ollama' | 'deepseek'
     model: 'gpt-4o',         // optional, defaults per provider
     apiKey: '...',           // optional, falls back to env vars
   }
@@ -27,11 +27,14 @@ easydocs({
 
 Default provider resolution:
 1. If `ai.provider` is set in config, use it
-2. If `OPENAI_API_KEY` is set, use OpenAI
-3. If `ANTHROPIC_API_KEY` is set, use Anthropic
-4. If neither, attempt Ollama on `localhost:11434`
+2. If `ANTHROPIC_API_KEY` is set, use Anthropic
+3. If `DEEPSEEK_API_KEY` is set, use DeepSeek
+4. If `OPENAI_API_KEY` is set, use OpenAI
+5. If none, attempt Ollama on `localhost:11434`
 
-Supported providers at v1: OpenAI, Anthropic, Ollama.
+Default models per provider: `gpt-4o` (OpenAI), `claude-3-5-sonnet-20241022` (Anthropic), `deepseek-chat` (DeepSeek), `llama3.2` (Ollama).
+
+Supported providers: OpenAI, Anthropic, DeepSeek, Ollama.
 
 ## Consequences
 
