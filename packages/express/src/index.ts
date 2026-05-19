@@ -1,4 +1,4 @@
-import { capture, parseConfig } from '@easydocs/core'
+import { capture, parseConfig, buildCaptureEvent } from '@easydocs/core'
 import type { EasyDocsConfig } from '@easydocs/core'
 import type { Request, Response, NextFunction } from 'express'
 
@@ -10,18 +10,18 @@ export function easydocs(config?: EasyDocsConfig) {
 
     res.json = function (body: unknown) {
       capture(
-        {
-          method: req.method as import('@easydocs/core').HttpMethod,
+        buildCaptureEvent({
+          method: req.method,
           path: req.route?.path ?? req.path,
-          query: req.query as Record<string, string>,
-          params: req.params as Record<string, string>,
-          body: req.body,
-          response: body,
+          query: req.query as Record<string, unknown>,
+          params: req.params,
+          requestBody: req.body,
+          responseBody: body,
           status: res.statusCode,
-          requestHeaders: req.headers as Record<string, string>,
-          responseHeaders: res.getHeaders() as Record<string, string>,
+          requestHeaders: req.headers as Record<string, unknown>,
+          responseHeaders: res.getHeaders() as Record<string, unknown>,
           durationMs: Date.now() - startedAt,
-        },
+        }),
         parsedConfig
       )
       return originalJson(body)

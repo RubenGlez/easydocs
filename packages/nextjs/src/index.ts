@@ -1,5 +1,5 @@
-import { capture, parseConfig } from '@easydocs/core'
-import type { EasyDocsConfig, HttpMethod } from '@easydocs/core'
+import { capture, parseConfig, buildCaptureEvent } from '@easydocs/core'
+import type { EasyDocsConfig } from '@easydocs/core'
 
 // ─── Local structural types (avoid importing from next at build time) ──────────
 
@@ -44,7 +44,7 @@ export function withEasydocs(handler: AppRouterHandler, config?: EasyDocsConfig)
     try {
       responseBody = await response.clone().json()
     } catch {
-      // non-JSON response — skip body capture
+      // non-JSON response
     }
 
     let resolvedParams: Record<string, string> = {}
@@ -63,18 +63,18 @@ export function withEasydocs(handler: AppRouterHandler, config?: EasyDocsConfig)
     }
 
     capture(
-      {
-        method: req.method as HttpMethod,
+      buildCaptureEvent({
+        method: req.method,
         path: req.nextUrl.pathname,
         query: Object.fromEntries(req.nextUrl.searchParams.entries()),
         params: resolvedParams,
-        body: requestBody,
-        response: responseBody,
+        requestBody,
+        responseBody,
         status: response.status,
         requestHeaders: Object.fromEntries(req.headers.entries()),
         responseHeaders: Object.fromEntries(response.headers.entries()),
         durationMs: Date.now() - startedAt,
-      },
+      }),
       parsedConfig
     )
 
@@ -97,18 +97,17 @@ export function withEasydocsPagesHandler(
 
     res.json = function (body: unknown) {
       capture(
-        {
-          method: (req.method ?? 'GET') as HttpMethod,
+        buildCaptureEvent({
+          method: req.method ?? 'GET',
           path: req.url?.split('?')[0] ?? '/',
-          query: req.query as Record<string, string>,
-          params: {},
-          body: req.body,
-          response: body,
+          query: req.query as Record<string, unknown>,
+          requestBody: req.body,
+          responseBody: body,
           status: res.statusCode,
-          requestHeaders: req.headers as Record<string, string>,
-          responseHeaders: res.getHeaders() as Record<string, string>,
+          requestHeaders: req.headers as Record<string, unknown>,
+          responseHeaders: res.getHeaders() as Record<string, unknown>,
           durationMs: Date.now() - startedAt,
-        },
+        }),
         parsedConfig
       )
       return originalJson(body)

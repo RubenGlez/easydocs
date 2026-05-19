@@ -6,8 +6,8 @@ import {
   Inject,
 } from '@nestjs/common'
 import { Observable, tap } from 'rxjs'
-import { capture } from '@easydocs/core'
-import type { EasyDocsConfig, HttpMethod } from '@easydocs/core'
+import { capture, buildCaptureEvent } from '@easydocs/core'
+import type { EasyDocsConfig } from '@easydocs/core'
 
 interface HttpRequest {
   method: string
@@ -38,21 +38,19 @@ export class EasyDocsInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       tap((responseBody: unknown) => {
-        const routePath = req.route?.path ?? req.path
-
         capture(
-          {
-            method: req.method as HttpMethod,
-            path: routePath,
-            query: req.query as Record<string, string>,
-            params: req.params as Record<string, string>,
-            body: req.body,
-            response: responseBody,
+          buildCaptureEvent({
+            method: req.method,
+            path: req.route?.path ?? req.path,
+            query: req.query as Record<string, unknown>,
+            params: req.params as Record<string, unknown>,
+            requestBody: req.body,
+            responseBody,
             status: res.statusCode,
-            requestHeaders: req.headers as Record<string, string>,
-            responseHeaders: res.getHeaders() as Record<string, string>,
+            requestHeaders: req.headers as Record<string, unknown>,
+            responseHeaders: res.getHeaders() as Record<string, unknown>,
             durationMs: Date.now() - startedAt,
-          },
+          }),
           this.config
         )
       })

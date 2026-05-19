@@ -1,5 +1,5 @@
-import { capture, parseConfig } from '@easydocs/core'
-import type { EasyDocsConfig, HttpMethod } from '@easydocs/core'
+import { capture, parseConfig, buildCaptureEvent } from '@easydocs/core'
+import type { EasyDocsConfig } from '@easydocs/core'
 import {
   defineEventHandler,
   getMethod,
@@ -38,20 +38,18 @@ export function easydocs(config?: EasyDocsConfig): EventHandler {
       }
 
       capture(
-        {
-          method: rawMethod as HttpMethod,
+        buildCaptureEvent({
+          method: rawMethod,
           path: url.pathname,
-          query: getQuery(event) as Record<string, string>,
-          params: (event.context.params as Record<string, string>) ?? {},
-          body: requestBody,
-          response: response.body,
+          query: getQuery(event) as Record<string, unknown>,
+          params: event.context.params as Record<string, unknown>,
+          requestBody,
+          responseBody: response.body,
           status: event.node.res.statusCode,
-          requestHeaders: getHeaders(event) as Record<string, string>,
-          responseHeaders: Object.fromEntries(
-            Object.entries(event.node.res.getHeaders()).map(([k, v]) => [k, String(v ?? '')])
-          ),
+          requestHeaders: getHeaders(event) as Record<string, unknown>,
+          responseHeaders: event.node.res.getHeaders() as Record<string, unknown>,
           durationMs: Date.now() - (event.context._easydocsStart ?? Date.now()),
-        },
+        }),
         parsedConfig
       )
     },

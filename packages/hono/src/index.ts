@@ -1,5 +1,5 @@
-import { capture, parseConfig } from '@easydocs/core'
-import type { EasyDocsConfig, HttpMethod } from '@easydocs/core'
+import { capture, parseConfig, buildCaptureEvent } from '@easydocs/core'
+import type { EasyDocsConfig } from '@easydocs/core'
 import type { Context, Next } from 'hono'
 
 export function easydocs(config?: EasyDocsConfig) {
@@ -8,7 +8,7 @@ export function easydocs(config?: EasyDocsConfig) {
     const startedAt = Date.now()
     await next()
 
-    let responseBody: unknown
+    let responseBody: unknown = null
     try {
       responseBody = await c.res.clone().json()
     } catch {
@@ -23,21 +23,20 @@ export function easydocs(config?: EasyDocsConfig) {
     }
 
     const url = new URL(c.req.url)
-    const routePath = c.req.routePath ?? url.pathname
 
     capture(
-      {
-        method: c.req.method as HttpMethod,
-        path: routePath,
+      buildCaptureEvent({
+        method: c.req.method,
+        path: c.req.routePath ?? url.pathname,
         query: Object.fromEntries(url.searchParams.entries()),
-        params: c.req.param() as Record<string, string>,
-        body: requestBody,
-        response: responseBody,
+        params: c.req.param() as Record<string, unknown>,
+        requestBody,
+        responseBody,
         status: c.res.status,
         requestHeaders: Object.fromEntries(c.req.raw.headers.entries()),
         responseHeaders: Object.fromEntries(c.res.headers.entries()),
         durationMs: Date.now() - startedAt,
-      },
+      }),
       parsedConfig
     )
   }

@@ -1,5 +1,5 @@
-import { capture, parseConfig } from '@easydocs/core'
-import type { EasyDocsConfig, HttpMethod } from '@easydocs/core'
+import { capture, parseConfig, buildCaptureEvent } from '@easydocs/core'
+import type { EasyDocsConfig } from '@easydocs/core'
 import { Elysia } from 'elysia'
 
 export function easydocs(config?: EasyDocsConfig) {
@@ -22,21 +22,20 @@ export function easydocs(config?: EasyDocsConfig) {
         response instanceof Response ? response.status : (set.status as number | undefined) ?? 200
 
       capture(
-        {
-          method: request.method as HttpMethod,
+        buildCaptureEvent({
+          method: request.method,
           path,
-          query: query as Record<string, string>,
-          params: params as Record<string, string>,
-          body,
-          response: responseBody,
+          query: query as Record<string, unknown>,
+          params: params as Record<string, unknown>,
+          requestBody: body,
+          responseBody,
           status,
           requestHeaders: Object.fromEntries(request.headers.entries()),
           responseHeaders:
             response instanceof Response
               ? Object.fromEntries(response.headers.entries())
-              : (set.headers as Record<string, string>) ?? {},
-          durationMs: 0,
-        },
+              : (set.headers as Record<string, unknown>) ?? {},
+        }),
         parsedConfig
       )
     }
