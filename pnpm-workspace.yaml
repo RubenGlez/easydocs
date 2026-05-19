@@ -1,7 +1,6 @@
 packages:
   - 'packages/*'
   - 'apps/*'
-  - 'evals'
 minimumReleaseAge: 0
 allowBuilds:
   '@nestjs/core': true

@@ -1,5 +1,8 @@
 description: EasyDocs — OpenAPI spec generation quality evals
 
+env:
+  dotenvPath: ../../.env
+
 providers:
   - id: 'file://provider.ts'
     label: easydocs-builder

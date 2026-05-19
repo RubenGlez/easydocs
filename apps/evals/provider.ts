@@ -7,10 +7,11 @@ import type { CaptureEvent } from '@easydocs/core'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
 try {
-  process.loadEnvFile(resolve(__dirname, '../.env'))
+  process.loadEnvFile(resolve(__dirname, '../../.env'))
 } catch {
   // .env may not exist in CI — env vars are set directly
 }
+
 // Alias DeepSeek key to OPENAI_API_KEY so promptfoo's OpenAI-compatible grading
 // provider can pick it up without needing a separate OPENAI_API_KEY secret.
 if (!process.env.OPENAI_API_KEY && process.env.DEEPSEEK_API_KEY) {
