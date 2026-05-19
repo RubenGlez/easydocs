@@ -1,6 +1,6 @@
 {
   "name": "@easydocs/dashboard",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "EasyDocs docs dashboard — view and export AI-generated OpenAPI specs",
   "files": [
     "src",
