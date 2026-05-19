@@ -11,28 +11,43 @@ const DEFAULT_MODELS = {
   deepseek: 'deepseek-chat',
 }
 
+type Provider = 'openai' | 'anthropic' | 'ollama' | 'deepseek'
+
+// Precedence when no explicit provider is set:
+//   1. ANTHROPIC_API_KEY → anthropic
+//   2. DEEPSEEK_API_KEY  → deepseek
+//   3. otherwise         → openai (works even without OPENAI_API_KEY, e.g. local proxies)
+// If the caller supplied an explicit apiKey without a provider, assume openai.
+function detectProvider(hasExplicitApiKey: boolean): Provider {
+  if (hasExplicitApiKey) return 'openai'
+  if (process.env.ANTHROPIC_API_KEY) return 'anthropic'
+  if (process.env.DEEPSEEK_API_KEY) return 'deepseek'
+  return 'openai'
+}
+
 export function resolveModel(config?: AIConfig): LanguageModel {
-  const provider = config?.provider
+  const provider: Provider = config?.provider ?? detectProvider(!!config?.apiKey)
+  const model = config?.model ?? DEFAULT_MODELS[provider]
 
-  if (provider === 'anthropic' || (!provider && !config?.apiKey && process.env.ANTHROPIC_API_KEY)) {
-    const client = createAnthropic({ apiKey: config?.apiKey ?? process.env.ANTHROPIC_API_KEY })
-    return client(config?.model ?? DEFAULT_MODELS.anthropic)
+  switch (provider) {
+    case 'anthropic': {
+      const client = createAnthropic({ apiKey: config?.apiKey ?? process.env.ANTHROPIC_API_KEY })
+      return client(model)
+    }
+    case 'deepseek': {
+      const client = createDeepSeek({ apiKey: config?.apiKey ?? process.env.DEEPSEEK_API_KEY })
+      return client(model)
+    }
+    case 'ollama': {
+      const client = createOpenAI({
+        baseURL: config?.baseUrl ?? 'http://localhost:11434/v1',
+        apiKey: 'ollama',
+      })
+      return client(model)
+    }
+    default: {
+      const client = createOpenAI({ apiKey: config?.apiKey ?? process.env.OPENAI_API_KEY })
+      return client(model)
+    }
   }
-
-  if (provider === 'deepseek' || (!provider && !config?.apiKey && process.env.DEEPSEEK_API_KEY)) {
-    const client = createDeepSeek({ apiKey: config?.apiKey ?? process.env.DEEPSEEK_API_KEY })
-    return client(config?.model ?? DEFAULT_MODELS.deepseek)
-  }
-
-  if (provider === 'ollama') {
-    const client = createOpenAI({
-      baseURL: config?.baseUrl ?? 'http://localhost:11434/v1',
-      apiKey: 'ollama',
-    })
-    return client(config?.model ?? DEFAULT_MODELS.ollama)
-  }
-
-  // Default: OpenAI (explicit config, env var, or fallback)
-  const client = createOpenAI({ apiKey: config?.apiKey ?? process.env.OPENAI_API_KEY })
-  return client(config?.model ?? DEFAULT_MODELS.openai)
 }
