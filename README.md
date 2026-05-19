@@ -178,7 +178,9 @@ docs/
 pnpm install
 pnpm dev        # runs all packages and dashboard in parallel
 pnpm build      # builds all packages
-pnpm test       # runs integration tests
+pnpm lint       # lint all packages
+pnpm typecheck  # typecheck all packages
+pnpm test       # runs tests across all packages
 pnpm eval       # runs AI spec quality evals (requires API key)
 ```
 
