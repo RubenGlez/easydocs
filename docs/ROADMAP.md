@@ -52,8 +52,9 @@ Goal: broader framework support and team collaboration features.
 
 ### DX
 - [x] `@easydocs/cli` — proxy mode (`npx easydocs`) + spec export (`npx easydocs export`)
-
-> **Deferred to v3:** tRPC adapter, spec version history, diff view
+- [x] Multiple project support (separate spec per project/service)
+- [x] Runtime config validation with readable error messages (`parseConfig`)
+- [x] AI spec quality eval harness (`apps/evals` — promptfoo)
 
 ---
 
@@ -61,7 +62,8 @@ Goal: broader framework support and team collaboration features.
 
 Goal: features that make EasyDocs the go-to tool for API documentation in teams.
 
-- [x] Multiple project support (separate spec per project/service)
+- [ ] tRPC adapter
+- [ ] Spec version history and diff view
 - [ ] Webhook notifications when specs change
 - [ ] GitHub Actions integration — post spec diffs to PRs
 - [ ] Spec linting and validation suggestions
