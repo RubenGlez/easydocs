@@ -89,11 +89,14 @@ OPENAI_API_KEY=sk-...
 # Anthropic
 ANTHROPIC_API_KEY=sk-ant-...
 
+# DeepSeek
+DEEPSEEK_API_KEY=sk-...
+
 # Ollama (local, no key needed)
 # configure in code: easydocs({ ai: { provider: 'ollama' } })
 ```
 
-EasyDocs auto-detects the provider from your environment. If neither key is set, it falls back to Ollama at `localhost:11434`.
+EasyDocs auto-detects the provider from your environment. If no key is set, it falls back to Ollama at `localhost:11434`.
 
 ---
 
@@ -103,7 +106,7 @@ EasyDocs auto-detects the provider from your environment. If neither key is set,
 easydocs({
   project: 'my-api',          // separate spec per service, default: 'default'
   ai: {
-    provider: 'openai',       // 'openai' | 'anthropic' | 'ollama'
+    provider: 'openai',       // 'openai' | 'anthropic' | 'ollama' | 'deepseek'
     model: 'gpt-4o',
     apiKey: '...',            // optional, falls back to env vars
   },
