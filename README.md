@@ -165,11 +165,11 @@ apps/
   test-api/   ← fixture Express app for testing
   evals/      ← promptfoo eval harness for AI spec quality
 docs/
-  ARCHITECTURE.md
   CICD.md
   MISSION.md
   ROADMAP.md
-  STACK.md
+  CONTRIBUTING.md
+  adr/          ← Architecture Decision Records
 ```
 
 ## Development
