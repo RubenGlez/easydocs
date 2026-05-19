@@ -22,12 +22,16 @@ function warnIfNoAIKey(config?: EasyDocsConfig) {
   if (_aiKeyWarned) return
   const provider = config?.ai?.provider
   if (provider === 'ollama') return
-  const hasKey = config?.ai?.apiKey || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY
+  const hasKey =
+    config?.ai?.apiKey ||
+    process.env.OPENAI_API_KEY ||
+    process.env.ANTHROPIC_API_KEY ||
+    process.env.DEEPSEEK_API_KEY
   if (!hasKey) {
     _aiKeyWarned = true
     console.warn(
       '\n[EasyDocs] No AI key found. Specs will not be generated.\n' +
-      '  Set OPENAI_API_KEY or ANTHROPIC_API_KEY in your environment,\n' +
+      '  Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or DEEPSEEK_API_KEY in your environment,\n' +
       '  or configure { ai: { provider: "ollama" } } to use a local model.\n'
     )
   }

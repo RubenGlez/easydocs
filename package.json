@@ -8,6 +8,7 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
+    "seed": "tsx scripts/seed-traffic.ts",
     "eval": "pnpm --filter easydocs-evals eval",
     "release": "node scripts/release.mjs",
     "release:minor": "node scripts/release.mjs minor",
@@ -15,7 +16,8 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "typescript": "^5",
-    "tsup": "^8.3.0"
+    "tsup": "^8.3.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5"
   }
 }
