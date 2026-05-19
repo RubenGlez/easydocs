@@ -14,7 +14,7 @@ export interface CaptureEvent {
 }
 
 export interface AIConfig {
-  provider?: 'openai' | 'anthropic' | 'ollama'
+  provider?: 'openai' | 'anthropic' | 'ollama' | 'deepseek'
   model?: string
   apiKey?: string
   baseUrl?: string

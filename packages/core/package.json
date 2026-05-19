@@ -29,13 +29,14 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^1.2.0",
-    "@ai-sdk/openai": "^1.2.0",
+    "@ai-sdk/anthropic": "^3.0.78",
+    "@ai-sdk/deepseek": "^2.0.35",
+    "@ai-sdk/openai": "^3.0.64",
     "@libsql/client": "^0.14.0",
-    "postgres": "^3.4.5",
-    "ai": "^4.2.0",
+    "ai": "^6.0.185",
     "drizzle-orm": "^0.39.0",
-    "zod": "^3.24.1"
+    "postgres": "^3.4.5",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "tsup": "^8.3.0",
