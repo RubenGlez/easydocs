@@ -25,11 +25,14 @@ easydocs({
 })
 ```
 
-Both backends implement the same `StorageAdapter` interface from `packages/core`, so switching is a one-line config change.
+Both backends implement the same `DatabaseAdapter` interface from `packages/core/src/storage/adapter.ts`, so switching is a one-line config change.
+
+**Why Drizzle ORM:** works with both SQLite and Postgres from the same schema definition. Lightweight, TypeScript-first, no heavy runtime. A single schema file covers both dialects.
+
+**Why `@libsql/client`:** async, embedded SQLite via libSQL. No server process, no connection string, works anywhere Node.js runs — unlike `better-sqlite3`, which is synchronous and requires native compilation.
 
 ## Consequences
 
 - Zero infrastructure required to get started
-- `better-sqlite3` is a native module — requires compilation on install (acceptable tradeoff)
 - SQLite is local per-machine; teams wanting shared docs need to configure Postgres
 - Drizzle ORM supports both dialects, so the schema and query code is shared
