@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import CodeMirror from '@uiw/react-codemirror'
+import { json } from '@codemirror/lang-json'
+import { oneDark } from '@codemirror/theme-one-dark'
 import type { Endpoint } from '@easydocs/core/schema'
 import type { Operation } from '@easydocs/core'
 import { OperationSchema } from '@/lib/operation-schema'
@@ -79,12 +82,22 @@ export function SpecEditor({ endpoint, onSaved, onCancel }: Props) {
           </button>
         </div>
       </div>
-      <textarea
-        className={`flex-1 resize-none bg-zinc-950 font-mono text-xs p-4 focus:outline-none ${invalid ? 'text-zinc-400' : 'text-zinc-200'}`}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        spellCheck={false}
-      />
+      <div className="flex-1 overflow-auto">
+        <CodeMirror
+          value={value}
+          height="100%"
+          extensions={[json()]}
+          theme={oneDark}
+          onChange={setValue}
+          basicSetup={{
+            lineNumbers: true,
+            foldGutter: true,
+            bracketMatching: true,
+            autocompletion: true,
+          }}
+          style={{ fontSize: '12px', height: '100%' }}
+        />
+      </div>
       {validationError && (
         <div className="px-4 py-2 border-t border-red-900/50 bg-red-950/30 text-xs text-red-400 font-mono">
           {validationError}
