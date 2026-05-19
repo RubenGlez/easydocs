@@ -22,7 +22,7 @@
 | **`@libsql/client`** | Embedded SQLite storage (default, zero-config) |
 | **`postgres`** | Postgres storage (opt-in, team use) |
 | **Drizzle ORM** | Database schema and queries (both SQLite and Postgres) |
-| **Zod** | OpenAPI OperationSchema validation and AI output typing |
+| **Zod** | `OperationSchema` for AI output typing; `EasyDocsConfigSchema` for runtime config validation |
 
 ## Framework Adapters
 
@@ -31,9 +31,12 @@ Each adapter has minimal dependencies — only what the target framework require
 | Package | Runtime dependency |
 |---------|--------------------|
 | `@easydocs/express` | none (types only: `@types/express`) |
-| `@easydocs/fastify` | none (types only: `@fastify/types`) |
+| `@easydocs/fastify` | none (types only: `fastify`) |
 | `@easydocs/hono` | none (types only: `hono`) |
+| `@easydocs/h3` | none (types only: `h3`) |
+| `@easydocs/elysia` | none (types only: `elysia`) |
 | `@easydocs/nestjs` | `@nestjs/common`, `rxjs` (peer deps) |
+| `@easydocs/nextjs` | none (types only: `next`) |
 
 ## apps/dashboard
 
@@ -43,8 +46,14 @@ Each adapter has minimal dependencies — only what the target framework require
 | **React 19** | UI rendering |
 | **Tailwind CSS** | Styling |
 | **CodeMirror 6** | JSON spec editor with syntax highlighting |
-| **Zod** | Client-side spec validation in the editor |
+| **Zod** | Client-side spec validation in the editor (via `OperationSchema` from `@easydocs/core`) |
 | **js-yaml** | YAML export |
+
+## apps/evals
+
+| Tool | Purpose |
+|------|---------|
+| **promptfoo** | Eval harness — runs `buildOperation()` against fixtures and grades AI output quality |
 
 ## Why These Choices
 
@@ -69,3 +78,6 @@ Each adapter has minimal dependencies — only what the target framework require
 | OpenAI only | Multi-provider via Vercel AI SDK | No forced vendor lock-in |
 | Postgres only | SQLite default + Postgres opt-in | Zero infra to get started |
 | Swagger UI | Custom dashboard | Differentiator, better UX |
+| TypeScript interfaces for config | Zod schemas + `parseConfig()` | Runtime validation with readable errors |
+| Inline spec assembly per consumer | `buildFullSpec()` in core | Single source of truth for spec shape |
+| `isPostgres` branching in capture | `DatabaseAdapter` interface | Storage details hidden behind a seam |

@@ -12,7 +12,7 @@ pnpm install
 
 ```
 packages/   ← publishable npm packages
-apps/       ← internal apps (dashboard)
+apps/       ← internal apps (dashboard, test-api, evals)
 docs/       ← project documentation and ADRs
 ```
 
@@ -30,6 +30,9 @@ pnpm typecheck
 
 # build all packages
 pnpm build
+
+# run AI quality evals (requires API key in .env)
+pnpm eval
 ```
 
 ## Adding a New Framework Adapter
@@ -37,18 +40,19 @@ pnpm build
 1. Create `packages/<framework>/` with its own `package.json`
 2. Add `@easydocs/core` as a dependency
 3. Implement the adapter — it must:
-   - Accept `EasyDocsConfig` as its configuration
-   - Build a `CaptureEvent` from the framework's request/response objects
-   - Call `core.capture(event, config)` — that's it
-4. Write integration tests using a real instance of the framework
-5. Add an ADR documenting the framework-specific design decisions
+   - Call `parseConfig(config)` at setup time (throws on invalid config immediately)
+   - Hook into the framework's request/response lifecycle
+   - Call `buildCaptureEvent({ method, path, query, params, requestBody, responseBody, status, requestHeaders, responseHeaders, durationMs })` to normalise the data
+   - Call `capture(event, parsedConfig)` — fire and forget, never await
+4. Write integration tests using a real instance of the framework; mock only `capture` from `@easydocs/core` using the `importOriginal` pattern
+5. Add an ADR documenting any framework-specific design decisions
 6. Update `docs/ROADMAP.md` to move the framework from planned to done
 
 ## Adding a New AI Provider
 
 1. Add the provider package from Vercel AI SDK (e.g. `@ai-sdk/groq`)
-2. Update `packages/core/src/ai/provider.ts` to handle the new provider name
-3. Update the `EasyDocsConfig` type to include the new provider
+2. Update `packages/core/src/ai/provider.ts` — add the provider to `detectProvider()` and the `switch` in `resolveModel()`
+3. Update the `AIConfigSchema` in `packages/core/src/types.ts` to include the new provider name in the `provider` enum
 4. Add a test with a mocked provider response
 5. Update `docs/STACK.md` and `docs/adr/0004-multi-provider-ai.md`
 

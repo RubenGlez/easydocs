@@ -60,7 +60,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: eval-results
-          path: evals/results.json
+          path: apps/evals/results.json
 ```
 
 ### Dashboard deploy
