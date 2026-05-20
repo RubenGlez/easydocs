@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { json } from '@codemirror/lang-json'
 import { oneDark } from '@codemirror/theme-one-dark'
@@ -32,17 +32,12 @@ function validate(raw: string): string | null {
 export function SpecEditor({ endpoint, onSaved, onCancel }: Props) {
   const activeSpec = endpoint.isManuallyEdited ? endpoint.manualSpec : endpoint.spec
   const [value, setValue] = useState(() => JSON.stringify(activeSpec, null, 2))
-  const [validationError, setValidationError] = useState<string | null>(null)
+  const validationError = validate(value)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    setValidationError(validate(value))
-  }, [value])
-
   async function handleSave() {
-    const err = validate(value)
-    if (err) { setValidationError(err); return }
+    if (validationError) return
     setSaveError(null)
     setSaving(true)
     const parsed = JSON.parse(value) as Operation

@@ -9,7 +9,7 @@ function ValueNode({ value, depth = 0 }: { value: unknown; depth?: number }) {
   if (typeof value === 'number')
     return <span className="text-amber-400">{String(value)}</span>
   if (typeof value === 'string')
-    return <span className="text-green-400">"{value}"</span>
+    return <span className="text-green-400">&quot;{value}&quot;</span>
 
   if (Array.isArray(value)) {
     if (value.length === 0) return <span className="text-zinc-400">[]</span>
@@ -38,7 +38,7 @@ function ValueNode({ value, depth = 0 }: { value: unknown; depth?: number }) {
         <div className="ml-4">
           {entries.map(([k, v], i) => (
             <div key={k}>
-              <span className="text-sky-300">"{k}"</span>
+              <span className="text-sky-300">&quot;{k}&quot;</span>
               <span className="text-zinc-400">: </span>
               <ValueNode value={v} depth={depth + 1} />
               {i < entries.length - 1 && <span className="text-zinc-600">,</span>}
