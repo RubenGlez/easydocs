@@ -168,7 +168,6 @@ docs/
   CICD.md
   MISSION.md
   ROADMAP.md
-  CONTRIBUTING.md
   adr/          ← Architecture Decision Records
 ```
 
