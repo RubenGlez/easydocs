@@ -1,7 +1,7 @@
 packages:
   - 'packages/*'
   - 'apps/*'
-minimumReleaseAge: 10080
+minimumReleaseAge: 1440
 allowBuilds:
   '@nestjs/core': true
   '@playwright/browser-chromium': true
