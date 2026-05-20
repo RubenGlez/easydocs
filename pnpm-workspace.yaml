@@ -10,6 +10,7 @@ overrides:
   js-yaml: ^4.1.1
   picomatch: ^2.3.2
   postcss: ^8.5.15
+  vite: ^8.0.13
   ws: ^8.20.1
 allowBuilds:
   '@nestjs/core': true
