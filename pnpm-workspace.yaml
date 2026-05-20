@@ -4,6 +4,10 @@ packages:
 minimumReleaseAge: 1440
 overrides:
   protobufjs: ^8.0.2
+  glob: ^10.5.0
+  minimatch: ^9.0.7
+  flatted: ^3.4.2
+  picomatch: ^2.3.2
 allowBuilds:
   '@nestjs/core': true
   '@playwright/browser-chromium': true
