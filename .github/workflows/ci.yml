@@ -35,3 +35,6 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Audit
+        run: pnpm audit --audit-level=high
