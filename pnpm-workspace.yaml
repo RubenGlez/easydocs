@@ -7,7 +7,10 @@ overrides:
   glob: ^10.5.0
   minimatch: ^9.0.7
   flatted: ^3.4.2
+  js-yaml: ^4.1.1
   picomatch: ^2.3.2
+  postcss: ^8.5.15
+  ws: ^8.20.1
 allowBuilds:
   '@nestjs/core': true
   '@playwright/browser-chromium': true
