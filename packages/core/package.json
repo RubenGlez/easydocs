@@ -37,7 +37,7 @@
     "ai": "^6.0.185",
     "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.5",
-    "zod": "^3.25.76"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "tsup": "^8.3.0",
