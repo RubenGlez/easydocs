@@ -33,7 +33,7 @@
     "@ai-sdk/anthropic": "^3.0.78",
     "@ai-sdk/deepseek": "^2.0.35",
     "@ai-sdk/openai": "^3.0.64",
-    "@libsql/client": "^0.14.0",
+    "@libsql/client": "^0.17.3",
     "ai": "^6.0.185",
     "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.5",
