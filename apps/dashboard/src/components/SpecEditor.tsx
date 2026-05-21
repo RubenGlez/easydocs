@@ -5,8 +5,8 @@ import CodeMirror from '@uiw/react-codemirror'
 import { json } from '@codemirror/lang-json'
 import { oneDark } from '@codemirror/theme-one-dark'
 import type { Endpoint } from '@easydocs/core/schema'
-import type { Operation } from '@easydocs/core'
-import { OperationSchema } from '@easydocs/core'
+import type { Operation } from '@easydocs/core/spec/schema'
+import { OperationSchema } from '@easydocs/core/spec/schema'
 
 interface Props {
   endpoint: Endpoint

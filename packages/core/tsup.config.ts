@@ -4,6 +4,7 @@ export default defineConfig({
   entry: {
     index: 'src/index.ts',
     'storage/schema': 'src/storage/schema.ts',
+    'spec/schema': 'src/spec/schema.ts',
     dashboard: 'src/dashboard.ts',
   },
   format: ['esm', 'cjs'],

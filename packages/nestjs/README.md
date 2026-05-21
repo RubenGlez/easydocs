@@ -28,11 +28,26 @@ That's it. A global interceptor is automatically registered. Every controller re
 
 ## Per-controller or per-route
 
-```ts
-import { UseInterceptors } from '@nestjs/common'
-import { EasyDocsInterceptor } from '@easydocs/nestjs'
+`EasyDocsInterceptor` requires the `EASYDOCS_CAPTURER` DI token to be provided. The easiest way is to still import `EasyDocsModule.forRoot()` globally (which registers the token), then apply the interceptor manually on specific controllers instead of relying on the global one.
 
-// Skip the forRoot() import and use selectively:
+If you want full control without `forRoot()`, provide the token yourself:
+
+```ts
+import { Module } from '@nestjs/common'
+import { UseInterceptors, Controller } from '@nestjs/common'
+import { EasyDocsInterceptor, EASYDOCS_CAPTURER } from '@easydocs/nestjs'
+import { createCapturer, parseConfig } from '@easydocs/core'
+
+@Module({
+  providers: [
+    {
+      provide: EASYDOCS_CAPTURER,
+      useValue: createCapturer(parseConfig({ project: 'my-api' })),
+    },
+  ],
+})
+export class UsersModule {}
+
 @UseInterceptors(EasyDocsInterceptor)
 @Controller('users')
 export class UsersController {}

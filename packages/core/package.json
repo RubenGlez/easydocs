@@ -20,6 +20,11 @@
       "import": "./dist/storage/schema.js",
       "require": "./dist/storage/schema.cjs",
       "types": "./dist/storage/schema.d.ts"
+    },
+    "./spec/schema": {
+      "import": "./dist/spec/schema.js",
+      "require": "./dist/spec/schema.cjs",
+      "types": "./dist/spec/schema.d.ts"
     }
   },
   "scripts": {

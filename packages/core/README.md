@@ -16,23 +16,24 @@ You don't need to install this directly. Framework adapters (`@easydocs/express`
 ## Direct usage
 
 ```ts
-import { capture } from '@easydocs/core'
+import { createCapturer, parseConfig, buildCaptureEvent } from '@easydocs/core'
 
-capture({
+// At setup time — creates a Capturer with its own storage adapter and queue
+const capturer = createCapturer(parseConfig({ project: 'my-api', ai: { provider: 'openai' } }))
+
+// Per request — fire and forget, never await
+capturer.capture(buildCaptureEvent({
   method: 'GET',
   path: '/users',
   query: { page: '1' },
   params: {},
-  body: null,
-  response: { data: [], total: 0 },
+  requestBody: null,
+  responseBody: { data: [], total: 0 },
   status: 200,
   requestHeaders: {},
   responseHeaders: {},
   durationMs: 12,
-}, {
-  project: 'my-api',
-  ai: { provider: 'openai' },
-})
+}))
 ```
 
 ## Configuration

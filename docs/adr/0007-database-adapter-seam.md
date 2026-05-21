@@ -41,7 +41,7 @@ interface DatabaseAdapter {
 }
 ```
 
-A `createAdapter(storageConfig?)` factory returns the right implementation. `capture.ts` holds a module-level singleton and never sees SQLite or Postgres types directly.
+A `createAdapter(storageConfig?)` factory returns the right implementation. Each `Capturer` instance (from `createCapturer()`) owns its own `DatabaseAdapter` and never sees SQLite or Postgres types directly.
 
 ## Consequences
 
