@@ -37,3 +37,4 @@ yarn-error.log*
 
 # test coverage
 coverage/
+.playwright-mcp/
