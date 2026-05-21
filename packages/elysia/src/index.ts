@@ -1,9 +1,10 @@
-import { capture, parseConfig, buildCaptureEvent } from '@easydocs/core'
+import { createCapturer, parseConfig, buildCaptureEvent } from '@easydocs/core'
 import type { EasyDocsConfig } from '@easydocs/core'
 import { Elysia } from 'elysia'
 
 export function easydocs(config?: EasyDocsConfig) {
   const parsedConfig = parseConfig(config)
+  const capturer = createCapturer(parsedConfig)
   return new Elysia({ name: '@easydocs/elysia' }).onAfterHandle(
     { as: 'global' },
     async ({ request, response, set, path, params, query, body }) => {
@@ -21,7 +22,7 @@ export function easydocs(config?: EasyDocsConfig) {
       const status =
         response instanceof Response ? response.status : (set.status as number | undefined) ?? 200
 
-      capture(
+      capturer.capture(
         buildCaptureEvent({
           method: request.method,
           path,
@@ -35,8 +36,7 @@ export function easydocs(config?: EasyDocsConfig) {
             response instanceof Response
               ? Object.fromEntries(response.headers.entries())
               : (set.headers as Record<string, unknown>) ?? {},
-        }),
-        parsedConfig
+        })
       )
     }
   )

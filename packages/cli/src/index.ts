@@ -1,5 +1,5 @@
 import { createDB, getAllEndpoints, getEndpointsByProject, findOrCreateProject, buildFullSpec } from '@easydocs/core'
-import { capture } from '@easydocs/core'
+import { createCapturer, parseConfig } from '@easydocs/core'
 import type { HttpMethod } from '@easydocs/core'
 import { createServer } from 'http'
 import { createRequire } from 'module'
@@ -121,6 +121,7 @@ async function runExport(args: string[]) {
 async function runProxy(args: string[]) {
   const port = parseInt(getFlag(args, 'port') ?? '3999', 10)
   const projectSlug = getFlag(args, 'project') ?? 'default'
+  const capturer = createCapturer(parseConfig({ project: projectSlug }))
 
   const server = createServer(async (req, res) => {
     const reqUrl = new URL(req.url ?? '/', `http://localhost:${port}`)
@@ -173,21 +174,18 @@ async function runProxy(args: string[]) {
       try { parsedRequestBody = JSON.parse(requestBody.toString()) } catch { parsedRequestBody = requestBody.toString() }
     }
 
-    capture(
-      {
-        method: method as HttpMethod,
-        path: targetUrl.pathname,
-        query: Object.fromEntries(targetUrl.searchParams.entries()),
-        params: {},
-        body: parsedRequestBody,
-        response: responseBody,
-        status: upstream.status,
-        requestHeaders: req.headers as Record<string, string>,
-        responseHeaders: Object.fromEntries(upstream.headers.entries()),
-        durationMs: Date.now() - startedAt,
-      },
-      { project: projectSlug }
-    )
+    capturer.capture({
+      method: method as HttpMethod,
+      path: targetUrl.pathname,
+      query: Object.fromEntries(targetUrl.searchParams.entries()),
+      params: {},
+      body: parsedRequestBody,
+      response: responseBody,
+      status: upstream.status,
+      requestHeaders: req.headers as Record<string, string>,
+      responseHeaders: Object.fromEntries(upstream.headers.entries()),
+      durationMs: Date.now() - startedAt,
+    })
 
     res.writeHead(upstream.status, Object.fromEntries(upstream.headers.entries()))
     res.end(responseText)

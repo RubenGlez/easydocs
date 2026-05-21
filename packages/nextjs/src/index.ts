@@ -1,4 +1,4 @@
-import { capture, parseConfig, buildCaptureEvent } from '@easydocs/core'
+import { createCapturer, parseConfig, buildCaptureEvent } from '@easydocs/core'
 import type { EasyDocsConfig } from '@easydocs/core'
 
 // ─── Local structural types (avoid importing from next at build time) ──────────
@@ -36,6 +36,7 @@ type AppRouterHandler = (req: NextRequestLike, ctx?: AppRouterContext) => Promis
 
 export function withEasydocs(handler: AppRouterHandler, config?: EasyDocsConfig): AppRouterHandler {
   const parsedConfig = parseConfig(config)
+  const capturer = createCapturer(parsedConfig)
   return async (req, ctx) => {
     const startedAt = Date.now()
     const response = await handler(req, ctx)
@@ -62,7 +63,7 @@ export function withEasydocs(handler: AppRouterHandler, config?: EasyDocsConfig)
       }
     }
 
-    capture(
+    capturer.capture(
       buildCaptureEvent({
         method: req.method,
         path: req.nextUrl.pathname,
@@ -74,8 +75,7 @@ export function withEasydocs(handler: AppRouterHandler, config?: EasyDocsConfig)
         requestHeaders: Object.fromEntries(req.headers.entries()),
         responseHeaders: Object.fromEntries(response.headers.entries()),
         durationMs: Date.now() - startedAt,
-      }),
-      parsedConfig
+      })
     )
 
     return response
@@ -91,12 +91,13 @@ export function withEasydocsPagesHandler(
   config?: EasyDocsConfig
 ): PagesHandler {
   const parsedConfig = parseConfig(config)
+  const capturer = createCapturer(parsedConfig)
   return async (req, res) => {
     const startedAt = Date.now()
     const originalJson = res.json.bind(res)
 
     res.json = function (body: unknown) {
-      capture(
+      capturer.capture(
         buildCaptureEvent({
           method: req.method ?? 'GET',
           path: req.url?.split('?')[0] ?? '/',
@@ -107,8 +108,7 @@ export function withEasydocsPagesHandler(
           requestHeaders: req.headers as Record<string, unknown>,
           responseHeaders: res.getHeaders() as Record<string, unknown>,
           durationMs: Date.now() - startedAt,
-        }),
-        parsedConfig
+        })
       )
       return originalJson(body)
     }

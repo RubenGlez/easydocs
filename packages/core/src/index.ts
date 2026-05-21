@@ -1,4 +1,5 @@
-export { capture } from './capture.js'
+export { createCapturer } from './capture.js'
+export type { Capturer } from './capture.js'
 export { createAdapter } from './storage/adapter.js'
 export type { DatabaseAdapter } from './storage/adapter.js'
 export { maybeStartDashboard } from './dashboard.js'

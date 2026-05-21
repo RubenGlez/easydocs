@@ -1,17 +1,18 @@
-import { capture, parseConfig, buildCaptureEvent, tryParseJson } from '@easydocs/core'
+import { createCapturer, parseConfig, buildCaptureEvent, tryParseJson } from '@easydocs/core'
 import type { EasyDocsConfig } from '@easydocs/core'
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify'
 import fp from 'fastify-plugin'
 
 const plugin: FastifyPluginAsync<EasyDocsConfig> = async (fastify, rawConfig) => {
   const config = parseConfig(rawConfig)
+  const capturer = createCapturer(config)
 
   fastify.addHook(
     'onSend',
     async (request: FastifyRequest, reply: FastifyReply, payload: unknown) => {
       const startedAt = (request as unknown as { easydocsStart?: number }).easydocsStart ?? Date.now()
 
-      capture(
+      capturer.capture(
         buildCaptureEvent({
           method: request.method,
           path: request.routeOptions?.url ?? request.url.split('?')[0],
@@ -23,8 +24,7 @@ const plugin: FastifyPluginAsync<EasyDocsConfig> = async (fastify, rawConfig) =>
           requestHeaders: request.headers as Record<string, unknown>,
           responseHeaders: reply.getHeaders() as Record<string, unknown>,
           durationMs: Date.now() - startedAt,
-        }),
-        config
+        })
       )
 
       return payload

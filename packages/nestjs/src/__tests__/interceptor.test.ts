@@ -1,13 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { of } from 'rxjs'
 import { EasyDocsInterceptor } from '../interceptor.js'
+import type { Capturer, CaptureEvent } from '@easydocs/core'
 
-vi.mock(import('@easydocs/core'), async (importOriginal) => {
-  const actual = await importOriginal()
-  return { ...actual, capture: vi.fn() }
-})
-
-import { capture } from '@easydocs/core'
+function makeCapturer() {
+  const capture = vi.fn<(event: CaptureEvent) => void>()
+  return { capture } satisfies Capturer
+}
 
 function makeContext(overrides: {
   method?: string
@@ -39,18 +38,16 @@ function makeContext(overrides: {
 }
 
 describe('EasyDocsInterceptor', () => {
-  beforeEach(() => vi.clearAllMocks())
-
   it('captures method and path', () => {
-    const interceptor = new EasyDocsInterceptor({})
+    const capturer = makeCapturer()
+    const interceptor = new EasyDocsInterceptor(capturer)
     const ctx = makeContext({ method: 'GET', path: '/users', routePath: '/users' })
     const handler = { handle: () => of({ data: [] }) }
 
     return new Promise<void>((resolve) => {
       interceptor.intercept(ctx as never, handler).subscribe(() => {
-        expect(capture).toHaveBeenCalledWith(
-          expect.objectContaining({ method: 'GET', path: '/users', status: 200 }),
-          {}
+        expect(capturer.capture).toHaveBeenCalledWith(
+          expect.objectContaining({ method: 'GET', path: '/users', status: 200 })
         )
         resolve()
       })
@@ -58,15 +55,15 @@ describe('EasyDocsInterceptor', () => {
   })
 
   it('captures query and body', () => {
-    const interceptor = new EasyDocsInterceptor({})
+    const capturer = makeCapturer()
+    const interceptor = new EasyDocsInterceptor(capturer)
     const ctx = makeContext({ query: { page: '1' }, body: { name: 'Alice' } })
     const handler = { handle: () => of({ id: 1 }) }
 
     return new Promise<void>((resolve) => {
       interceptor.intercept(ctx as never, handler).subscribe(() => {
-        expect(capture).toHaveBeenCalledWith(
-          expect.objectContaining({ query: { page: '1' }, body: { name: 'Alice' } }),
-          {}
+        expect(capturer.capture).toHaveBeenCalledWith(
+          expect.objectContaining({ query: { page: '1' }, body: { name: 'Alice' } })
         )
         resolve()
       })
@@ -74,29 +71,16 @@ describe('EasyDocsInterceptor', () => {
   })
 
   it('uses route path over req.path', () => {
-    const interceptor = new EasyDocsInterceptor({})
+    const capturer = makeCapturer()
+    const interceptor = new EasyDocsInterceptor(capturer)
     const ctx = makeContext({ path: '/users/42', routePath: '/users/:id' })
     const handler = { handle: () => of({}) }
 
     return new Promise<void>((resolve) => {
       interceptor.intercept(ctx as never, handler).subscribe(() => {
-        expect(capture).toHaveBeenCalledWith(
-          expect.objectContaining({ path: '/users/:id' }),
-          {}
+        expect(capturer.capture).toHaveBeenCalledWith(
+          expect.objectContaining({ path: '/users/:id' })
         )
-        resolve()
-      })
-    })
-  })
-
-  it('passes config to capture', () => {
-    const interceptor = new EasyDocsInterceptor({ project: 'my-api' })
-    const ctx = makeContext({})
-    const handler = { handle: () => of({}) }
-
-    return new Promise<void>((resolve) => {
-      interceptor.intercept(ctx as never, handler).subscribe(() => {
-        expect(capture).toHaveBeenCalledWith(expect.anything(), { project: 'my-api' })
         resolve()
       })
     })

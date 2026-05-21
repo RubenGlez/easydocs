@@ -1,9 +1,10 @@
-import { capture, parseConfig, buildCaptureEvent } from '@easydocs/core'
+import { createCapturer, parseConfig, buildCaptureEvent } from '@easydocs/core'
 import type { EasyDocsConfig } from '@easydocs/core'
 import type { Context, Next } from 'hono'
 
 export function easydocs(config?: EasyDocsConfig) {
   const parsedConfig = parseConfig(config)
+  const capturer = createCapturer(parsedConfig)
   return async function easydocsMiddleware(c: Context, next: Next) {
     const startedAt = Date.now()
     await next()
@@ -24,7 +25,7 @@ export function easydocs(config?: EasyDocsConfig) {
 
     const url = new URL(c.req.url)
 
-    capture(
+    capturer.capture(
       buildCaptureEvent({
         method: c.req.method,
         path: c.req.routePath ?? url.pathname,
@@ -36,8 +37,7 @@ export function easydocs(config?: EasyDocsConfig) {
         requestHeaders: Object.fromEntries(c.req.raw.headers.entries()),
         responseHeaders: Object.fromEntries(c.res.headers.entries()),
         durationMs: Date.now() - startedAt,
-      }),
-      parsedConfig
+      })
     )
   }
 }

@@ -1,6 +1,7 @@
 import { generateObject } from 'ai'
 import { resolveModel } from '../ai/provider.js'
 import { OperationSchema } from './schema.js'
+import { detectAuthSchemes, VALID_SCHEME_NAMES } from './auth.js'
 import type { CaptureEvent, AIConfig } from '../types.js'
 
 function trimResponse(response: unknown, maxItems = 1): unknown {
@@ -11,30 +12,6 @@ function trimResponse(response: unknown, maxItems = 1): unknown {
     )
   }
   return response
-}
-
-function detectAuthSchemes(
-  headers: Record<string, string>,
-  query: Record<string, string>
-): string[] {
-  const h = Object.fromEntries(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v]))
-  const q = Object.fromEntries(Object.entries(query).map(([k, v]) => [k.toLowerCase(), v]))
-  const schemes: string[] = []
-
-  const auth = h['authorization']
-  if (auth) {
-    if (/^bearer /i.test(auth)) schemes.push('bearerAuth')
-    else if (/^basic /i.test(auth)) schemes.push('basicAuth')
-    else schemes.push('bearerAuth') // unknown auth header, treat as bearer
-  }
-
-  if (h['x-api-key'] ?? h['api-key']) schemes.push('apiKeyHeader')
-  if (q['api_key'] ?? q['apikey'] ?? q['key']) schemes.push('apiKeyQuery')
-
-  // Cookie auth only when nothing else is present
-  if (schemes.length === 0 && h['cookie']) schemes.push('cookieAuth')
-
-  return [...new Set(schemes)]
 }
 
 export async function buildOperation(
@@ -64,7 +41,7 @@ export async function buildOperation(
       '- if a current spec is provided, update it rather than replacing it — preserve documented fields',
       '- write concise but useful summaries and descriptions',
       authGuideline,
-      '- valid security scheme names: bearerAuth, basicAuth, apiKeyHeader, apiKeyQuery, cookieAuth',
+      `- valid security scheme names: ${VALID_SCHEME_NAMES.join(', ')}`,
     ].join('\n'),
     prompt: [
       `Method: ${event.method}`,

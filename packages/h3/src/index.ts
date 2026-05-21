@@ -1,4 +1,4 @@
-import { capture, parseConfig, buildCaptureEvent } from '@easydocs/core'
+import { createCapturer, parseConfig, buildCaptureEvent } from '@easydocs/core'
 import type { EasyDocsConfig } from '@easydocs/core'
 import {
   defineEventHandler,
@@ -19,6 +19,7 @@ declare module 'h3' {
 
 export function easydocs(config?: EasyDocsConfig): EventHandler {
   const parsedConfig = parseConfig(config)
+  const capturer = createCapturer(parsedConfig)
   return defineEventHandler({
     onRequest(event: H3Event) {
       event.context._easydocsStart = Date.now()
@@ -37,7 +38,7 @@ export function easydocs(config?: EasyDocsConfig): EventHandler {
         }
       }
 
-      capture(
+      capturer.capture(
         buildCaptureEvent({
           method: rawMethod,
           path: url.pathname,
@@ -49,8 +50,7 @@ export function easydocs(config?: EasyDocsConfig): EventHandler {
           requestHeaders: getHeaders(event) as Record<string, unknown>,
           responseHeaders: event.node.res.getHeaders() as Record<string, unknown>,
           durationMs: Date.now() - (event.context._easydocsStart ?? Date.now()),
-        }),
-        parsedConfig
+        })
       )
     },
 

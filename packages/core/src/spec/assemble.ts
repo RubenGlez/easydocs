@@ -1,15 +1,9 @@
 import type { Endpoint } from '../storage/schema.js'
-
-const SECURITY_SCHEME_DEFS: Record<string, unknown> = {
-  bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-  basicAuth: { type: 'http', scheme: 'basic' },
-  apiKeyHeader: { type: 'apiKey', in: 'header', name: 'X-API-Key' },
-  apiKeyQuery: { type: 'apiKey', in: 'query', name: 'api_key' },
-  cookieAuth: { type: 'apiKey', in: 'cookie', name: 'session' },
-}
+import { SECURITY_SCHEME_DEFS, isAuthSchemeName } from './auth.js'
+import type { AuthSchemeName } from './auth.js'
 
 export function buildFullSpec(endpointList: Endpoint[], projectName?: string) {
-  const usedSchemes = new Set<string>()
+  const usedSchemes = new Set<AuthSchemeName>()
   const paths: Record<string, Record<string, unknown>> = {}
 
   for (const e of endpointList) {
@@ -23,7 +17,7 @@ export function buildFullSpec(endpointList: Endpoint[], projectName?: string) {
     if (activeSpec.security) {
       for (const entry of activeSpec.security) {
         for (const name of Object.keys(entry)) {
-          if (SECURITY_SCHEME_DEFS[name]) usedSchemes.add(name)
+          if (isAuthSchemeName(name)) usedSchemes.add(name)
         }
       }
     }

@@ -8,7 +8,7 @@ describe('CaptureQueue', () => {
     queue.add(async () => { results.push(1) })
     queue.add(async () => { results.push(2) })
     queue.add(async () => { results.push(3) })
-    await new Promise((r) => setTimeout(r, 20))
+    await queue.flush()
     expect(results).toEqual([1, 2, 3])
   })
 
@@ -18,8 +18,13 @@ describe('CaptureQueue', () => {
     queue.add(async () => { results.push('before') })
     queue.add(async () => { throw new Error('boom') })
     queue.add(async () => { results.push('after') })
-    await new Promise((r) => setTimeout(r, 20))
+    await queue.flush()
     expect(results).toEqual(['before', 'after'])
+  })
+
+  it('flush resolves immediately when queue is empty', async () => {
+    const queue = new CaptureQueue()
+    await queue.flush() // should not hang
   })
 
   it('size reflects pending tasks', () => {

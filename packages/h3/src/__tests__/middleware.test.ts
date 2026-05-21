@@ -4,14 +4,19 @@ import { easydocs } from '../index.js'
 
 vi.mock(import('@easydocs/core'), async (importOriginal) => {
   const actual = await importOriginal()
-  return { ...actual, capture: vi.fn() }
+  return { ...actual, createCapturer: vi.fn(() => ({ capture: vi.fn() })) }
 })
 
-const { capture } = await import('@easydocs/core')
+const { createCapturer } = await import('@easydocs/core')
 
-function makeHandler() {
+function getCaptureMock() {
+  const results = (createCapturer as ReturnType<typeof vi.fn>).mock.results
+  return results[results.length - 1].value.capture as ReturnType<typeof vi.fn>
+}
+
+function makeHandler(config?: object) {
   const app = createApp()
-  app.use(easydocs())
+  app.use(easydocs(config as never))
   const router = createRouter()
   router.get('/users', defineEventHandler((e) => {
     void getQuery(e)
@@ -28,27 +33,22 @@ describe('h3 middleware', () => {
 
   it('captures method and path', async () => {
     await makeHandler()(new Request('http://localhost/users'))
-    expect(capture).toHaveBeenCalledWith(
-      expect.objectContaining({ method: 'GET', status: 200 }),
-      {}
+    expect(getCaptureMock()).toHaveBeenCalledWith(
+      expect.objectContaining({ method: 'GET', status: 200 })
     )
   })
 
   it('captures query params', async () => {
     await makeHandler()(new Request('http://localhost/users?page=2&limit=10'))
-    expect(capture).toHaveBeenCalledWith(
-      expect.objectContaining({ query: { page: '2', limit: '10' } }),
-      {}
+    expect(getCaptureMock()).toHaveBeenCalledWith(
+      expect.objectContaining({ query: { page: '2', limit: '10' } })
     )
   })
 
   it('calls capture on response', async () => {
     await makeHandler()(new Request('http://localhost/users'))
-    // h3's onBeforeResponse body is undefined in toWebHandler test mode;
-    // just assert capture was called with the correct method/path/status
-    expect(capture).toHaveBeenCalledWith(
-      expect.objectContaining({ method: 'GET', path: '/users', status: 200 }),
-      {}
+    expect(getCaptureMock()).toHaveBeenCalledWith(
+      expect.objectContaining({ method: 'GET', path: '/users', status: 200 })
     )
   })
 
@@ -58,19 +58,15 @@ describe('h3 middleware', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ name: 'Alice' }),
     }))
-    expect(capture).toHaveBeenCalledWith(
-      expect.objectContaining({ method: 'POST', body: { name: 'Alice' } }),
-      {}
+    expect(getCaptureMock()).toHaveBeenCalledWith(
+      expect.objectContaining({ method: 'POST', body: { name: 'Alice' } })
     )
   })
 
-  it('passes config to capture', async () => {
-    const app = createApp()
-    app.use(easydocs({ project: 'my-api' }))
-    const router = createRouter()
-    router.get('/ping', defineEventHandler(() => ({ ok: true })))
-    app.use(router)
-    await toWebHandler(app)(new Request('http://localhost/ping'))
-    expect(capture).toHaveBeenCalledWith(expect.anything(), { project: 'my-api' })
+  it('passes config to createCapturer', async () => {
+    makeHandler({ project: 'my-api' })
+    expect(createCapturer).toHaveBeenCalledWith(
+      expect.objectContaining({ project: 'my-api' })
+    )
   })
 })

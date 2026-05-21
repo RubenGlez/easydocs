@@ -1,2 +1,2 @@
 export { EasyDocsModule } from './module'
-export { EasyDocsInterceptor, EASYDOCS_CONFIG } from './interceptor'
+export { EasyDocsInterceptor, EASYDOCS_CAPTURER } from './interceptor'
