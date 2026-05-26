@@ -32,5 +32,10 @@
     "next": "^16.2.6",
     "tsup": "^8.3.0",
     "typescript": "^5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RubenGlez/easydocs",
+    "directory": ""
   }
 }

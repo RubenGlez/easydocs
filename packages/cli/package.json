@@ -5,7 +5,7 @@
     "dist",
     "README.md"
   ],
-  "description": "EasyDocs CLI — proxy mode and spec export",
+  "description": "EasyDocs CLI \u2014 proxy mode and spec export",
   "type": "module",
   "bin": {
     "easydocs": "./dist/index.js"
@@ -25,5 +25,10 @@
     "@types/node": "^20",
     "tsup": "^8.3.0",
     "typescript": "^5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RubenGlez/easydocs",
+    "directory": ""
   }
 }
