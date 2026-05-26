@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   publish:
     name: Publish packages to npm
@@ -27,13 +31,19 @@ jobs:
       - name: Build packages
         run: pnpm --filter './packages/*' build
 
+      - name: Lint
+        run: pnpm lint
+
       - name: Typecheck
         run: pnpm typecheck
 
       - name: Test
         run: pnpm test
 
+      - name: Audit
+        run: pnpm audit --audit-level=high --prod
+
       - name: Publish
-        run: pnpm publish -r --access public --no-git-checks --filter './packages/*' --filter '@easydocs/dashboard'
+        run: pnpm publish -r --access public --provenance --no-git-checks --filter './packages/*' --filter '@easydocs/dashboard'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

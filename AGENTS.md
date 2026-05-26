@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -98,7 +99,7 @@ function getCaptureMock() {
 
 `apps/evals/` uses promptfoo to test AI output quality against fixtures. It loads the API key from the workspace root `.env` via `dotenvPath: ../../.env` in `promptfooconfig.yaml` and also via `process.loadEnvFile` in `provider.ts` for the provider subprocess. Run with `pnpm eval` from the workspace root.
 
-## Release
+## Releasing
 
 ```bash
 pnpm release          # patch bump
