@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/banner.png" alt="EasyDocs — Add one line. Get OpenAPI docs from real traffic." />
+</p>
+
 # EasyDocs
 
 **Add one line. Get OpenAPI docs from real traffic.**
@@ -27,9 +31,9 @@ npm install @easydocs/express
 ```
 
 ```ts
-import { easydocs } from '@easydocs/express'
+import { easydocs } from "@easydocs/express";
 
-app.use(easydocs({ project: 'my-api' }))
+app.use(easydocs({ project: "my-api" }));
 // all your existing routes stay the same
 ```
 
@@ -65,16 +69,16 @@ npx easydocs export --yaml > openapi.yaml
 
 ## Framework adapters
 
-| Package | Framework |
-|---------|-----------|
-| [`@easydocs/express`](./packages/express) | Express |
-| [`@easydocs/fastify`](./packages/fastify) | Fastify |
-| [`@easydocs/hono`](./packages/hono) | Hono |
-| [`@easydocs/nestjs`](./packages/nestjs) | NestJS |
-| [`@easydocs/nextjs`](./packages/nextjs) | Next.js (App Router + Pages Router) |
-| [`@easydocs/h3`](./packages/h3) | h3 / Nitro / Nuxt |
-| [`@easydocs/elysia`](./packages/elysia) | Elysia (Bun) |
-| [`@easydocs/cli`](./packages/cli) | Proxy + export (no framework needed) |
+| Package                                   | Framework                            |
+| ----------------------------------------- | ------------------------------------ |
+| [`@easydocs/express`](./packages/express) | Express                              |
+| [`@easydocs/fastify`](./packages/fastify) | Fastify                              |
+| [`@easydocs/hono`](./packages/hono)       | Hono                                 |
+| [`@easydocs/nestjs`](./packages/nestjs)   | NestJS                               |
+| [`@easydocs/nextjs`](./packages/nextjs)   | Next.js (App Router + Pages Router)  |
+| [`@easydocs/h3`](./packages/h3)           | h3 / Nitro / Nuxt                    |
+| [`@easydocs/elysia`](./packages/elysia)   | Elysia (Bun)                         |
+| [`@easydocs/cli`](./packages/cli)         | Proxy + export (no framework needed) |
 
 ---
 
@@ -104,25 +108,25 @@ EasyDocs auto-detects the provider from your environment. If no key is set, it f
 
 ```ts
 easydocs({
-  project: 'my-api',          // separate spec per service, default: 'default'
+  project: "my-api", // separate spec per service, default: 'default'
   ai: {
-    provider: 'openai',       // 'openai' | 'anthropic' | 'ollama' | 'deepseek'
-    model: 'gpt-4o',
-    apiKey: '...',            // optional, falls back to env vars
+    provider: "openai", // 'openai' | 'anthropic' | 'ollama' | 'deepseek'
+    model: "gpt-4o",
+    apiKey: "...", // optional, falls back to env vars
   },
   storage: {
-    type: 'sqlite',           // 'sqlite' | 'postgres'
-    url: 'file:./docs.sqlite',
+    type: "sqlite", // 'sqlite' | 'postgres'
+    url: "file:./docs.sqlite",
   },
   capture: {
-    ignoreRoutes: ['/health', '/metrics'],
-    includePaths: ['/api'],
+    ignoreRoutes: ["/health", "/metrics"],
+    includePaths: ["/api"],
   },
   dashboard: {
-    autoStart: true,          // spawn dashboard on first capture (dev only)
+    autoStart: true, // spawn dashboard on first capture (dev only)
     port: 4999,
   },
-})
+});
 ```
 
 ---
@@ -133,10 +137,10 @@ Scope traffic from different services to separate specs:
 
 ```ts
 // service-a
-app.use(easydocs({ project: 'users-service' }))
+app.use(easydocs({ project: "users-service" }));
 
 // service-b
-app.use(easydocs({ project: 'orders-service' }))
+app.use(easydocs({ project: "orders-service" }));
 ```
 
 Switch between projects in the dashboard or scope the export:
