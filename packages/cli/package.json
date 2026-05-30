@@ -1,11 +1,11 @@
 {
   "name": "@easydocs/cli",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "files": [
     "dist",
     "README.md"
   ],
-  "description": "EasyDocs CLI \u2014 proxy mode and spec export",
+  "description": "EasyDocs CLI — proxy mode and spec export",
   "type": "module",
   "bin": {
     "easydocs": "./dist/index.js"
