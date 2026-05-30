@@ -21,8 +21,14 @@ packages/
   fastify/
   hono/
   nestjs/
+  nextjs/
+  h3/
+  elysia/
+  cli/
 apps/
   dashboard/
+  evals/
+  test-api/
 ```
 
 Each package under `packages/` is a publishable npm package with its own `package.json`, versioning, and changelog. `apps/dashboard` is not published — it's bundled into the local installation flow.

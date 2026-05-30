@@ -22,7 +22,7 @@ pnpm release:minor     # minor bump
 pnpm release:major     # major bump
 ```
 
-Runs build → typecheck → test, then publishes all packages to npm. (Lint is skipped in the publish job — it runs in CI on the PR.)
+Runs build → typecheck → test, then publishes all packages to npm with `--provenance`, so each release includes npm provenance attestations linking the package to its source commit and workflow run. (Lint is skipped in the publish job — it runs in CI on the PR.)
 
 **Required secret:** `NPM_TOKEN`
 - Generate at npmjs.com → Access Tokens → Automation token

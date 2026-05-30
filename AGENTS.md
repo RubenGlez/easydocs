@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -51,6 +50,7 @@ The heart of the system. Key modules:
 | `event.ts` | `buildCaptureEvent(RawCaptureInput)` — normalises loose adapter types to strict `CaptureEvent` |
 | `shape.ts` | `hashShape()` + `extractShape()` — structural fingerprint of a response body, key-order-stable, null-safe |
 | `types.ts` | All shared types as Zod schemas; `parseConfig()` validates config at adapter setup time |
+| `dashboard.ts` | `maybeStartDashboard(port?)` — auto-starts the Next.js dashboard as a detached child process in dev mode; checks port availability, walks up to locate `pnpm-workspace.yaml` |
 | `storage/adapter.ts` | `DatabaseAdapter` interface + `createAdapter()` factory — the seam between core and SQLite/Postgres |
 | `storage/sqlite.ts` | SQLite implementation via `@libsql/client` + Drizzle ORM |
 | `storage/postgres.ts` | Postgres implementation via `postgres` + Drizzle ORM |
