@@ -9,11 +9,11 @@
     "view": "promptfoo view"
   },
   "dependencies": {
-    "@easydocs/core": "workspace:*",
-    "promptfoo": "^0.121.14"
+    "@easydocs/core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "promptfoo": "^0.121.14",
     "tsx": "^4.22.3",
     "typescript": "^5"
   }
