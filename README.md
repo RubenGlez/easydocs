@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/banner.png" alt="EasyDocs — Add one line. Get OpenAPI docs from real traffic." />
+  <img src="banner.png" alt="EasyDocs — Add one line. Get OpenAPI docs from real traffic." />
 </p>
 
 # EasyDocs
@@ -168,11 +168,6 @@ apps/
   dashboard/  ← @easydocs/dashboard (docs UI)
   test-api/   ← fixture Express app for testing
   evals/      ← promptfoo eval harness for AI spec quality
-docs/
-  CICD.md
-  MISSION.md
-  ROADMAP.md
-  adr/          ← Architecture Decision Records
 ```
 
 ## Development
