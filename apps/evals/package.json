@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@easydocs/core": "workspace:*",
-    "promptfoo": "^0.121.11"
+    "promptfoo": "^0.121.14"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
