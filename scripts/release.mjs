@@ -9,19 +9,17 @@ const root = resolve(__dirname, '..')
 
 const bump = process.argv[2] ?? 'patch'
 if (!['patch', 'minor', 'major'].includes(bump)) {
-  console.error('Usage: node scripts/release.js [patch|minor|major]')
+  console.error('Usage: node scripts/release.mjs [patch|minor|major]')
   process.exit(1)
 }
 
-// ─── Check clean working tree ─────────────────────────────────────────────────
-
-const status = execSync('git status --porcelain').toString().trim()
-if (status) {
-  console.error('Working tree is not clean. Commit or stash changes first.')
-  process.exit(1)
+function run(cmd) {
+  execSync(cmd, { cwd: root, stdio: 'inherit' })
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+function get(cmd) {
+  return execSync(cmd, { cwd: root, encoding: 'utf8' }).trim()
+}
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'))
@@ -38,7 +36,30 @@ function bumpVersion(version, type) {
   return `${major}.${minor}.${patch + 1}`
 }
 
-// ─── Bump ─────────────────────────────────────────────────────────────────────
+const branch = get('git rev-parse --abbrev-ref HEAD')
+if (branch !== 'main') {
+  console.error(`Must be on main (currently on ${branch})`)
+  process.exit(1)
+}
+
+const status = get('git status --porcelain')
+if (status) {
+  console.error('Working tree is dirty — commit or stash changes first')
+  process.exit(1)
+}
+
+run('git fetch origin main')
+const behind = get('git rev-list HEAD..origin/main --count')
+if (behind !== '0') {
+  console.error(`Branch is ${behind} commit(s) behind origin/main — pull first`)
+  process.exit(1)
+}
+
+run('pnpm --filter \'./packages/*\' build')
+run('pnpm lint')
+run('pnpm typecheck')
+run('pnpm test')
+run('pnpm audit --audit-level=high --prod')
 
 const rootPkgPath = resolve(root, 'package.json')
 const rootPkg = readJson(rootPkgPath)
@@ -63,11 +84,9 @@ for (const rel of pkgPaths) {
   console.log(`  updated ${rel}`)
 }
 
-// ─── Commit, tag, push ────────────────────────────────────────────────────────
+run(`git add package.json ${pkgPaths.join(' ')}`)
+run(`git commit -m "v${next}"`)
+run(`git tag v${next}`)
+run('git push origin main --tags')
 
-execSync(`git add package.json ${pkgPaths.join(' ')}`, { cwd: root })
-execSync(`git commit -m "chore: release v${next}"`, { cwd: root, stdio: 'inherit' })
-execSync(`git tag v${next}`, { cwd: root })
-execSync(`git push origin main --tags`, { cwd: root, stdio: 'inherit' })
-
-console.log(`\nReleased v${next} — publish workflow triggered.`)
+run('pnpm publish -r --access public --provenance --no-git-checks --filter \'./packages/*\' --filter \'@easydocs/dashboard\'')
