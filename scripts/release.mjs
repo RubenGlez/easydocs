@@ -89,4 +89,4 @@ run(`git commit -m "v${next}"`)
 run(`git tag v${next}`)
 run('git push origin main --tags')
 
-run('pnpm publish -r --access public --provenance --no-git-checks --filter \'./packages/*\' --filter \'@easydocs/dashboard\'')
+run('pnpm publish -r --access public --no-git-checks --filter \'./packages/*\' --filter \'@easydocs/dashboard\'')
