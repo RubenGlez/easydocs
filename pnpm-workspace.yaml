@@ -10,8 +10,11 @@ overrides:
   js-yaml: ^4.1.1
   picomatch: ^2.3.2
   postcss: ^8.5.15
-  vite: ^8.0.13
+  vite: ^8.0.16
   ws: ^8.20.1
+  hono: ">=4.12.25"
+  undici: "^7.28.0"
+  form-data: ">=4.0.6"
 allowBuilds:
   '@nestjs/core': true
   '@playwright/browser-chromium': true
