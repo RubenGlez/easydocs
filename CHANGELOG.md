@@ -1,0 +1,33 @@
+# Changelog
+
+All notable changes to this project are documented here.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.5.4] - 2026-06-07
+
+### Changed
+- Stability and security line (0.4.x–0.5.x): Next.js 16 dashboard compatibility,
+  dependency CVE patches, and internal architecture hardening. No user-facing
+  feature changes.
+
+## [0.3.0] - 2026-05-19
+
+### Added
+- Dashboard: syntax highlighting in the spec editor and an improved endpoint detail view.
+
+## [0.2.0] - 2026-05-19
+
+### Added
+- DeepSeek AI provider and an upgrade to AI SDK v6.
+
+## [0.1.1] - 2026-05-17
+
+Initial release.
+
+### Added
+- Automatic OpenAPI documentation generated from real API traffic via a one-line middleware integration.
+- Adapter-based architecture with SQLite (default) and Postgres storage.
+- Multiple-project support, auth detection, security schemes, and response-conflict detection.
+- Dashboard for viewing and manually editing generated specs.
