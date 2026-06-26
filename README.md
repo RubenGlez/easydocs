@@ -151,45 +151,6 @@ npx easydocs export --project=users-service > users.json
 
 ---
 
-## Repository structure
-
-```
-packages/
-  core/       ← AI, storage, spec building (shared by all adapters)
-  express/    ← @easydocs/express
-  fastify/    ← @easydocs/fastify
-  hono/       ← @easydocs/hono
-  nestjs/     ← @easydocs/nestjs
-  nextjs/     ← @easydocs/nextjs
-  h3/         ← @easydocs/h3
-  elysia/     ← @easydocs/elysia
-  cli/        ← @easydocs/cli
-apps/
-  dashboard/  ← @easydocs/dashboard (docs UI)
-  test-api/   ← fixture Express app for testing
-  evals/      ← promptfoo eval harness for AI spec quality
-```
-
-## Development
-
-```bash
-pnpm install
-pnpm dev        # runs all packages and dashboard in parallel
-pnpm build      # builds all packages
-pnpm lint       # lint all packages
-pnpm typecheck  # typecheck all packages
-pnpm test       # runs tests across all packages
-pnpm eval       # runs AI spec quality evals (requires API key)
-```
-
-## Release
-
-```bash
-pnpm release           # patch bump → tag → publish
-pnpm release:minor     # minor bump
-pnpm release:major     # major bump
-```
-
 ## License
 
 MIT
