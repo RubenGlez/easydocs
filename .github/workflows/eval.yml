@@ -1,0 +1,42 @@
+name: Spec Accuracy
+
+# Runs the AI spec-accuracy gate across providers, so an accuracy regression or a
+# provider-compatibility break fails the build instead of shipping silently.
+# Requires repo secrets DEEPSEEK_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY.
+# If none are set (e.g. on forks), the gate skips and the job passes.
+on:
+  push:
+    branches: [main]
+    paths: ['packages/core/**', 'apps/evals/**']
+  pull_request:
+    branches: [main]
+    paths: ['packages/core/**', 'apps/evals/**']
+  workflow_dispatch:
+
+jobs:
+  accuracy-gate:
+    name: AI spec accuracy gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm --filter './packages/*' build
+
+      - name: Accuracy gate
+        run: pnpm --filter easydocs-evals gate
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

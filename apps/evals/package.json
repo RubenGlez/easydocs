@@ -7,6 +7,7 @@
     "eval": "promptfoo eval --no-cache",
     "eval:ci": "promptfoo eval --no-cache --output results.json",
     "matrix": "tsx matrix.ts",
+    "gate": "tsx matrix.ts --gate",
     "view": "promptfoo view"
   },
   "dependencies": {

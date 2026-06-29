@@ -6,8 +6,9 @@
 // per-model scoreboard. Models without credentials (or an unreachable Ollama)
 // are reported as skipped, never silently dropped.
 //
-//   pnpm matrix            # all available models
+//   pnpm matrix            # all available models, full scoreboard
 //   pnpm matrix --quiet    # scoreboard only, no per-fixture lines
+//   pnpm matrix --gate     # CI gate: fail (exit 1) if any tested provider's mean < threshold
 
 import { buildOperation } from '@easydocs/core'
 import { readFileSync, readdirSync } from 'fs'
@@ -15,9 +16,15 @@ import { resolve, join } from 'path'
 import score from './score.ts'
 
 const DIR = import.meta.dirname
-process.loadEnvFile(resolve(DIR, '../../.env'))
+try {
+  // Local dev reads keys from .env; CI sets them directly in the environment.
+  process.loadEnvFile(resolve(DIR, '../../.env'))
+} catch {
+  // no .env (e.g. CI) — env vars are expected to be set already
+}
 
 const QUIET = process.argv.includes('--quiet')
+const GATE = process.argv.includes('--gate')
 
 type Candidate = {
   provider: 'openai' | 'anthropic' | 'deepseek' | 'ollama'
@@ -96,6 +103,50 @@ async function runModel(c: Candidate) {
 }
 
 const label = (c: Candidate) => `${c.provider}/${c.model}`
+
+// --- CI gate mode -----------------------------------------------------------
+// Gate on one strong, stable model per cloud provider. Running across providers
+// (not just one) is what catches provider-compatibility breaks, e.g. a strict
+// structured-output API rejecting our schema. The threshold carries a margin
+// for the measured run-to-run variance: a single flaky fixture shouldn't fail
+// the build, but a systemic break (a provider generating zero valid specs)
+// drops the mean far enough to fail.
+const GATE_MODELS: Candidate[] = [
+  { provider: 'deepseek', model: 'deepseek-chat', keyEnv: 'DEEPSEEK_API_KEY' },
+  { provider: 'openai', model: 'gpt-4o', keyEnv: 'OPENAI_API_KEY' },
+  { provider: 'anthropic', model: 'claude-haiku-4-5-20251001', keyEnv: 'ANTHROPIC_API_KEY' },
+]
+const GATE_THRESHOLD = Number(process.env.GATE_THRESHOLD ?? 0.85)
+
+if (GATE) {
+  const tested: { c: Candidate; mean: number }[] = []
+  for (const c of GATE_MODELS) {
+    if (!(await available(c))) {
+      console.log(`skip ${label(c)} — ${c.keyEnv} not set`)
+      continue
+    }
+    process.stdout.write(`gating ${label(c)} (${fixtures.length} fixtures)...\n`)
+    const { mean, worst } = await runModel(c)
+    tested.push({ c, mean })
+    console.log(
+      `  ${label(c).padEnd(40)} mean=${mean.toFixed(3)}  worst ${worst.rel.replace('fixtures/', '')} (${worst.score.toFixed(2)})`
+    )
+  }
+
+  if (tested.length === 0) {
+    console.log('\nNo provider credentials available — accuracy gate skipped.')
+    process.exit(0)
+  }
+
+  const failures = tested.filter((t) => t.mean < GATE_THRESHOLD)
+  if (failures.length > 0) {
+    console.error(`\n❌ Accuracy gate FAILED (threshold ${GATE_THRESHOLD}):`)
+    for (const f of failures) console.error(`   ${label(f.c)} mean=${f.mean.toFixed(3)}`)
+    process.exit(1)
+  }
+  console.log(`\n✅ Accuracy gate passed — ${tested.length} model(s) ≥ ${GATE_THRESHOLD}.`)
+  process.exit(0)
+}
 
 const ran: { c: Candidate; mean: number; worst: any }[] = []
 const skipped: string[] = []
