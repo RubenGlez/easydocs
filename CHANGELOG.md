@@ -5,6 +5,20 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] - 2026-06-30
+
+### Fixed
+- Spec generation now works across all AI providers. OpenAI and Anthropic
+  previously generated zero specs because their strict structured-output APIs
+  reject EasyDocs's open-ended schema fields; generation now uses provider-
+  agnostic JSON output with client-side validation and retry.
+
+### Improved
+- More accurate, deterministic specs: only observed response status codes are
+  documented, every observed field is captured, and tags and parameter
+  requiredness are derived deterministically rather than guessed.
+- Better spec quality on local models (Ollama) via an output example in the prompt.
+
 ## [0.5.4] - 2026-06-07
 
 ### Changed
