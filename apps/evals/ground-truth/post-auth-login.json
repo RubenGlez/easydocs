@@ -1,0 +1,34 @@
+{
+  "tags": ["auth"],
+  "summary": "Authenticate with email and password",
+  "requestBody": {
+    "required": true,
+    "content": {
+      "application/json": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "email": { "type": "string" },
+            "password": { "type": "string" }
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "200": {
+      "description": "Authentication token and the authenticated user",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "token": { "type": "string" },
+              "user": { "type": "object" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

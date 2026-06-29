@@ -1,0 +1,25 @@
+{
+  "tags": ["products"],
+  "summary": "List products",
+  "parameters": [
+    { "name": "category", "in": "query", "required": false, "schema": { "type": "string" } },
+    { "name": "inStock", "in": "query", "required": false, "schema": { "type": "boolean" } },
+    { "name": "maxPrice", "in": "query", "required": false, "schema": { "type": "number" } }
+  ],
+  "responses": {
+    "200": {
+      "description": "Filtered list of products",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "data": { "type": "array" },
+              "total": { "type": "integer" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

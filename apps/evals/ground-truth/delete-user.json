@@ -1,0 +1,13 @@
+{
+  "tags": ["users"],
+  "summary": "Delete a user",
+  "security": [{ "bearerAuth": [] }],
+  "parameters": [
+    { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+  ],
+  "responses": {
+    "204": {
+      "description": "User deleted, no content"
+    }
+  }
+}

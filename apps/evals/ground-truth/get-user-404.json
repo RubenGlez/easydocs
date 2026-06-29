@@ -1,0 +1,22 @@
+{
+  "tags": ["users"],
+  "summary": "Get a user by id",
+  "parameters": [
+    { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+  ],
+  "responses": {
+    "404": {
+      "description": "User not found",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "error": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

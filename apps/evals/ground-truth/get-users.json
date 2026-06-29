@@ -1,0 +1,28 @@
+{
+  "tags": ["users"],
+  "summary": "List users",
+  "parameters": [
+    { "name": "page", "in": "query", "required": false, "schema": { "type": "integer" } },
+    { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer" } },
+    { "name": "role", "in": "query", "required": false, "schema": { "type": "string" } }
+  ],
+  "responses": {
+    "200": {
+      "description": "Paginated list of users",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "data": { "type": "array" },
+              "total": { "type": "integer" },
+              "page": { "type": "integer" },
+              "limit": { "type": "integer" },
+              "totalPages": { "type": "integer" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -24,6 +24,12 @@ defaultTest:
     - type: is-json
       metric: valid-json
 
+    # Overall accuracy vs the hand-authored ground-truth spec (ground-truth/<fixture>).
+    # Weighted across tags, parameters, responses, requestBody, security, and response schema.
+    - type: javascript
+      value: file://score.ts
+      metric: accuracy
+
     # Must have a summary field
     - type: javascript
       value: |
@@ -165,6 +171,60 @@ tests:
           const spec = JSON.parse(output);
           return Array.isArray(spec.security) && spec.security.length > 0;
         metric: has-security-field
+
+  # --- Real-traffic fixtures (captured from public APIs; see fixtures/real/SOURCES.md) ---
+
+  - description: 'REAL GET /users/:id (jsonplaceholder) — nested address + company objects'
+    vars:
+      fixture: fixtures/real/jsonplaceholder-get-user.json
+    assert:
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          const pathParams = (spec.parameters ?? []).filter(p => p.in === 'path');
+          return pathParams.some(p => p.name === 'id' && p.required === true);
+        metric: has-required-path-param
+
+  - description: 'REAL GET /posts?userId (jsonplaceholder) — array response + query filter'
+    vars:
+      fixture: fixtures/real/jsonplaceholder-list-posts.json
+    assert:
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          return (spec.parameters ?? []).some(p => p.name === 'userId' && p.in === 'query');
+        metric: has-userid-query-param
+
+  - description: 'REAL POST /posts (jsonplaceholder) — request body + 201'
+    vars:
+      fixture: fixtures/real/jsonplaceholder-create-post.json
+    assert:
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          return spec.requestBody != null && '201' in spec.responses;
+        metric: has-body-and-201
+
+  - description: 'REAL GET /repos/:owner/:repo (github) — large nested object, two path params'
+    vars:
+      fixture: fixtures/real/github-get-repo.json
+    assert:
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          const names = (spec.parameters ?? []).filter(p => p.in === 'path').map(p => p.name);
+          return names.includes('owner') && names.includes('repo');
+        metric: has-owner-repo-path-params
+
+  - description: 'REAL GET /repos/:owner/:repo/issues?state (github) — array + nested path & query'
+    vars:
+      fixture: fixtures/real/github-list-issues.json
+    assert:
+      - type: javascript
+        value: |
+          const spec = JSON.parse(output);
+          return (spec.parameters ?? []).some(p => p.name === 'state' && p.in === 'query');
+        metric: has-state-query-param
 
   - description: 'DELETE /users/:id — 204 no content + bearer auth'
     vars:

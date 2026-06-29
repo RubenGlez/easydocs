@@ -1,0 +1,37 @@
+{
+  "tags": ["posts"],
+  "summary": "Create a post",
+  "requestBody": {
+    "required": true,
+    "content": {
+      "application/json": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "body": { "type": "string" },
+            "userId": { "type": "integer" }
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "201": {
+      "description": "The created post",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" },
+              "title": { "type": "string" },
+              "body": { "type": "string" },
+              "userId": { "type": "integer" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

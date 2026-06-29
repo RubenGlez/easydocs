@@ -6,6 +6,7 @@
   "scripts": {
     "eval": "promptfoo eval --no-cache",
     "eval:ci": "promptfoo eval --no-cache --output results.json",
+    "matrix": "tsx matrix.ts",
     "view": "promptfoo view"
   },
   "dependencies": {

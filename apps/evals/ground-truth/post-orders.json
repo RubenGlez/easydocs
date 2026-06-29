@@ -1,0 +1,38 @@
+{
+  "tags": ["orders"],
+  "summary": "Create an order",
+  "security": [{ "bearerAuth": [] }],
+  "requestBody": {
+    "required": true,
+    "content": {
+      "application/json": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "items": { "type": "array" }
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "201": {
+      "description": "The created order",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "userId": { "type": "string" },
+              "items": { "type": "array" },
+              "status": { "type": "string" },
+              "total": { "type": "number" },
+              "createdAt": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

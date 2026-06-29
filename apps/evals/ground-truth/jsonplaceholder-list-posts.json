@@ -1,0 +1,20 @@
+{
+  "tags": ["posts"],
+  "summary": "List posts",
+  "parameters": [
+    { "name": "userId", "in": "query", "required": false, "schema": { "type": "string" } }
+  ],
+  "responses": {
+    "200": {
+      "description": "List of posts, optionally filtered by userId",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "array",
+            "items": { "type": "object" }
+          }
+        }
+      }
+    }
+  }
+}
