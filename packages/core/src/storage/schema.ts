@@ -30,6 +30,17 @@ export const endpoints = sqliteTable('endpoints', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
 })
 
+export const specVersions = sqliteTable('spec_versions', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => randomUUID()),
+  endpointId: text('endpoint_id').references(() => endpoints.id, { onDelete: 'cascade' }),
+  spec: text('spec', { mode: 'json' }).$type<Operation>(),
+  source: text('source', { enum: ['ai', 'manual'] }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
+})
+
 export type Project = typeof projects.$inferSelect
 export type Endpoint = typeof endpoints.$inferSelect
 export type NewEndpoint = typeof endpoints.$inferInsert
+export type SpecVersion = typeof specVersions.$inferSelect

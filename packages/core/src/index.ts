@@ -7,6 +7,7 @@ export {
   getAllEndpoints,
   getEndpointsByProject,
   getAllProjects,
+  getEndpointVersions,
   findOrCreateProject,
   deleteEndpointById,
   saveManualSpec,

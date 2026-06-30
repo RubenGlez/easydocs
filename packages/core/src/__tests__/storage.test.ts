@@ -153,3 +153,57 @@ describe('manual spec editing', () => {
     expect(endpoint.isManuallyEdited).toBe(true)
   })
 })
+
+describe('spec version history', () => {
+  it('records an initial ai version when an endpoint is created', async () => {
+    const projectId = await adapter.findOrCreateProject('api')
+    const id = await adapter.upsertEndpoint(projectId, '/users', 'GET', MOCK_SPEC, 'h1')
+    const versions = await adapter.getEndpointVersions(id)
+    expect(versions).toHaveLength(1)
+    expect(versions[0].source).toBe('ai')
+    expect(versions[0].spec?.summary).toBe('List users')
+  })
+
+  it('records a new version when the spec changes', async () => {
+    const projectId = await adapter.findOrCreateProject('api')
+    const id = await adapter.upsertEndpoint(projectId, '/users', 'GET', MOCK_SPEC, 'h1')
+    await adapter.upsertEndpoint(projectId, '/users', 'GET', { ...MOCK_SPEC, summary: 'Changed' }, 'h2')
+    const versions = await adapter.getEndpointVersions(id)
+    expect(versions).toHaveLength(2)
+    expect(versions.map((v) => v.spec?.summary).sort()).toEqual(['Changed', 'List users'])
+  })
+
+  it('does not record a version when the spec is unchanged', async () => {
+    const projectId = await adapter.findOrCreateProject('api')
+    const id = await adapter.upsertEndpoint(projectId, '/users', 'GET', MOCK_SPEC, 'h1')
+    await adapter.upsertEndpoint(projectId, '/users', 'GET', { ...MOCK_SPEC }, 'h2')
+    const versions = await adapter.getEndpointVersions(id)
+    expect(versions).toHaveLength(1)
+  })
+
+  it('dedupes regardless of object key order', async () => {
+    const projectId = await adapter.findOrCreateProject('api')
+    const id = await adapter.upsertEndpoint(projectId, '/u', 'GET', { summary: 'X', responses: {} }, 'h1')
+    await adapter.upsertEndpoint(projectId, '/u', 'GET', { responses: {}, summary: 'X' }, 'h2')
+    const versions = await adapter.getEndpointVersions(id)
+    expect(versions).toHaveLength(1)
+  })
+
+  it('records a manual version on saveManualSpec', async () => {
+    const projectId = await adapter.findOrCreateProject('api')
+    const id = await adapter.upsertEndpoint(projectId, '/users', 'GET', MOCK_SPEC, 'h1')
+    await adapter.saveManualSpec(id, { ...MOCK_SPEC, summary: 'Hand edited' })
+    const versions = await adapter.getEndpointVersions(id)
+    expect(versions).toHaveLength(2)
+    const manual = versions.find((v) => v.source === 'manual')
+    expect(manual?.spec?.summary).toBe('Hand edited')
+  })
+
+  it('scopes versions to their endpoint', async () => {
+    const projectId = await adapter.findOrCreateProject('api')
+    const a = await adapter.upsertEndpoint(projectId, '/a', 'GET', MOCK_SPEC, 'h1')
+    const b = await adapter.upsertEndpoint(projectId, '/b', 'GET', MOCK_SPEC, 'h2')
+    expect(await adapter.getEndpointVersions(a)).toHaveLength(1)
+    expect(await adapter.getEndpointVersions(b)).toHaveLength(1)
+  })
+})

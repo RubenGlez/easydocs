@@ -1,6 +1,6 @@
 import type { Operation } from '../spec/schema.js'
 import type { HttpMethod, StorageConfig } from '../types.js'
-import type { Endpoint, Project } from './schema.js'
+import type { Endpoint, Project, SpecVersion } from './schema.js'
 import { createSqliteAdapter } from './sqlite.js'
 import { createPostgresAdapter } from './postgres.js'
 
@@ -11,6 +11,7 @@ export interface DatabaseAdapter {
   getAllProjects(): Promise<Project[]>
   getAllEndpoints(): Promise<Endpoint[]>
   getEndpointsByProject(projectId: string): Promise<Endpoint[]>
+  getEndpointVersions(endpointId: string): Promise<SpecVersion[]>
   deleteEndpointById(id: string): Promise<void>
   saveManualSpec(id: string, manualSpec: Operation): Promise<void>
   resolveConflict(id: string, keep: 'ai' | 'manual'): Promise<void>

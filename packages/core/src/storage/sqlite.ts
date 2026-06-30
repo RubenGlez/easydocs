@@ -1,7 +1,8 @@
 import { createClient } from '@libsql/client'
 import { drizzle } from 'drizzle-orm/libsql'
-import { and, eq } from 'drizzle-orm'
-import { endpoints, projects } from './schema.js'
+import { and, desc, eq } from 'drizzle-orm'
+import { endpoints, projects, specVersions } from './schema.js'
+import { specsEqual } from './versions.js'
 import type { Operation } from '../spec/schema.js'
 import type { HttpMethod } from '../types.js'
 import type { DatabaseAdapter } from './adapter.js'
@@ -35,6 +36,17 @@ const INIT_SQL = `
 
   CREATE UNIQUE INDEX IF NOT EXISTS endpoints_path_method_project
     ON endpoints (path, method, project_id);
+
+  CREATE TABLE IF NOT EXISTS spec_versions (
+    id TEXT PRIMARY KEY,
+    endpoint_id TEXT REFERENCES endpoints(id) ON DELETE CASCADE,
+    spec TEXT,
+    source TEXT NOT NULL,
+    created_at INTEGER DEFAULT (unixepoch())
+  );
+
+  CREATE INDEX IF NOT EXISTS spec_versions_endpoint
+    ON spec_versions (endpoint_id, created_at);
 `
 
 // Best-effort migration for databases created before project support
@@ -57,7 +69,7 @@ export function createDB(url?: string) {
   const dbUrl = url ?? process.env.EASYDOCS_DB_URL ?? defaultDbUrl()
   ensureDir(dbUrl)
   const client = createClient({ url: dbUrl })
-  const db = drizzle(client, { schema: { projects, endpoints } })
+  const db = drizzle(client, { schema: { projects, endpoints, specVersions } })
 
   client
     .executeMultiple(INIT_SQL)
@@ -82,6 +94,19 @@ export async function getAllProjects(db: DB) {
 }
 
 // ─── Endpoints ───────────────────────────────────────────────────────────────
+
+async function recordVersion(db: DB, endpointId: string, spec: Operation, source: 'ai' | 'manual') {
+  await db.insert(specVersions).values({ id: crypto.randomUUID(), endpointId, spec, source })
+}
+
+export async function getEndpointVersions(db: DB, endpointId: string) {
+  return db
+    .select()
+    .from(specVersions)
+    .where(eq(specVersions.endpointId, endpointId))
+    .orderBy(desc(specVersions.createdAt))
+    .all()
+}
 
 export async function upsertEndpoint(
   db: DB,
@@ -110,11 +135,13 @@ export async function upsertEndpoint(
       .update(endpoints)
       .set({ spec, responseHash, hasConflict, updatedAt: new Date() })
       .where(eq(endpoints.id, existing.id))
+    if (!specsEqual(spec, existing.spec)) await recordVersion(db, existing.id, spec, 'ai')
     return existing.id
   }
 
   const id = crypto.randomUUID()
   await db.insert(endpoints).values({ id, projectId, path, method, spec, responseHash })
+  await recordVersion(db, id, spec, 'ai')
   return id
 }
 
@@ -150,6 +177,7 @@ export async function saveManualSpec(db: DB, id: string, manualSpec: Operation) 
     .update(endpoints)
     .set({ manualSpec, isManuallyEdited: true, hasConflict: false, updatedAt: new Date() })
     .where(eq(endpoints.id, id))
+  await recordVersion(db, id, manualSpec, 'manual')
 }
 
 export async function resolveConflict(db: DB, id: string, keep: 'ai' | 'manual') {
@@ -171,6 +199,7 @@ export async function resolveConflict(db: DB, id: string, keep: 'ai' | 'manual')
         updatedAt: new Date(),
       })
       .where(eq(endpoints.id, id))
+    if (!specsEqual(row.manualSpec, row.spec)) await recordVersion(db, id, row.manualSpec, 'manual')
   }
 }
 
@@ -181,7 +210,7 @@ export async function deleteEndpointById(db: DB, id: string) {
 async function createTestDB() {
   const client = createClient({ url: ':memory:' })
   await client.executeMultiple(INIT_SQL)
-  return drizzle(client, { schema: { projects, endpoints } })
+  return drizzle(client, { schema: { projects, endpoints, specVersions } })
 }
 
 // ─── Adapter ─────────────────────────────────────────────────────────────────
@@ -196,6 +225,7 @@ function wrapDB(db: DB): DatabaseAdapter {
     getAllProjects: () => getAllProjects(db),
     getAllEndpoints: () => getAllEndpoints(db),
     getEndpointsByProject: (projectId) => getEndpointsByProject(db, projectId),
+    getEndpointVersions: (endpointId) => getEndpointVersions(db, endpointId),
     deleteEndpointById: (id) => deleteEndpointById(db, id),
     saveManualSpec: (id, manualSpec) => saveManualSpec(db, id, manualSpec),
     resolveConflict: (id, keep) => resolveConflict(db, id, keep),

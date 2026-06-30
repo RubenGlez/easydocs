@@ -3,12 +3,14 @@
 import { useState, useCallback } from 'react'
 import { MethodBadge } from './MethodBadge'
 import { SpecEditor } from './SpecEditor'
+import { SpecVersionHistory } from './SpecVersionHistory'
 import { ConflictBanner } from './ConflictBanner'
 import type { Endpoint } from '@easydocs/core/schema'
 
 export function EndpointDetail({ endpoint: initial }: { endpoint: Endpoint }) {
   const [endpoint, setEndpoint] = useState(initial)
   const [editing, setEditing] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const [exampleOpen, setExampleOpen] = useState<Record<string, boolean>>({})
   const toggleExample = useCallback((key: string) => {
     setExampleOpen((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -43,17 +45,29 @@ export function EndpointDetail({ endpoint: initial }: { endpoint: Endpoint }) {
             </span>
           ))}
         </div>
-        <button
-          onClick={() => setEditing((e) => !e)}
-          className="text-xs px-3 py-1.5 rounded bg-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors"
-        >
-          {editing ? 'View docs' : 'Edit spec'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setShowHistory((h) => !h); setEditing(false) }}
+            className="text-xs px-3 py-1.5 rounded bg-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors"
+          >
+            {showHistory ? 'View docs' : 'History'}
+          </button>
+          <button
+            onClick={() => { setEditing((e) => !e); setShowHistory(false) }}
+            className="text-xs px-3 py-1.5 rounded bg-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors"
+          >
+            {editing ? 'View docs' : 'Edit spec'}
+          </button>
+        </div>
       </div>
 
       {editing ? (
         <div className="flex-1 overflow-hidden border-t border-zinc-800 mt-4">
           <SpecEditor endpoint={endpoint} onSaved={setEndpoint} onCancel={() => setEditing(false)} />
+        </div>
+      ) : showHistory ? (
+        <div className="flex-1 overflow-hidden border-t border-zinc-800 mt-4 flex flex-col">
+          <SpecVersionHistory endpointId={endpoint.id} />
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto px-8 pb-8 space-y-8">

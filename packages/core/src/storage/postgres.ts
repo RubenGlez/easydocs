@@ -1,11 +1,12 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgresJs from 'postgres'
-import { and, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { pgTable, uuid, text, jsonb, timestamp, boolean } from 'drizzle-orm/pg-core'
+import { specsEqual } from './versions.js'
 import type { Operation } from '../spec/schema.js'
 import type { HttpMethod } from '../types.js'
 import type { DatabaseAdapter } from './adapter.js'
-import type { Endpoint, Project } from './schema.js'
+import type { Endpoint, Project, SpecVersion } from './schema.js'
 
 export const pgProjects = pgTable('projects', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -26,6 +27,14 @@ export const pgEndpoints = pgTable('endpoints', {
   responseHash: text('response_hash'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+export const pgSpecVersions = pgTable('spec_versions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  endpointId: uuid('endpoint_id').references(() => pgEndpoints.id, { onDelete: 'cascade' }),
+  spec: jsonb('spec').$type<Operation>(),
+  source: text('source').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
 })
 
 const INIT_SQL = `
@@ -50,6 +59,17 @@ const INIT_SQL = `
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE (path, method, project_id)
   );
+
+  CREATE TABLE IF NOT EXISTS spec_versions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    endpoint_id UUID REFERENCES endpoints(id) ON DELETE CASCADE,
+    spec JSONB,
+    source TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  CREATE INDEX IF NOT EXISTS spec_versions_endpoint
+    ON spec_versions (endpoint_id, created_at);
 `
 
 export type PgDB = ReturnType<typeof createPgDB>
@@ -90,6 +110,18 @@ export async function pgGetAllProjects(db: PgDB) {
 
 // ─── Endpoints ───────────────────────────────────────────────────────────────
 
+async function pgRecordVersion(db: PgDB, endpointId: string, spec: Operation, source: 'ai' | 'manual') {
+  await db.insert(pgSpecVersions).values({ endpointId, spec, source })
+}
+
+export async function pgGetEndpointVersions(db: PgDB, endpointId: string) {
+  return db
+    .select()
+    .from(pgSpecVersions)
+    .where(eq(pgSpecVersions.endpointId, endpointId))
+    .orderBy(desc(pgSpecVersions.createdAt))
+}
+
 export async function pgUpsertEndpoint(
   db: PgDB,
   projectId: string,
@@ -118,6 +150,7 @@ export async function pgUpsertEndpoint(
       .update(pgEndpoints)
       .set({ spec, responseHash, hasConflict, updatedAt: new Date() })
       .where(eq(pgEndpoints.id, existing.id))
+    if (!specsEqual(spec, existing.spec)) await pgRecordVersion(db, existing.id, spec, 'ai')
     return existing.id
   }
 
@@ -125,6 +158,7 @@ export async function pgUpsertEndpoint(
     .insert(pgEndpoints)
     .values({ projectId, path, method, spec, responseHash })
     .returning({ id: pgEndpoints.id })
+  await pgRecordVersion(db, result[0].id, spec, 'ai')
   return result[0].id
 }
 
@@ -165,6 +199,7 @@ export async function pgSaveManualSpec(db: PgDB, id: string, manualSpec: Operati
     .update(pgEndpoints)
     .set({ manualSpec, isManuallyEdited: true, hasConflict: false, updatedAt: new Date() })
     .where(eq(pgEndpoints.id, id))
+  await pgRecordVersion(db, id, manualSpec, 'manual')
 }
 
 export async function pgResolveConflict(db: PgDB, id: string, keep: 'ai' | 'manual') {
@@ -180,6 +215,7 @@ export async function pgResolveConflict(db: PgDB, id: string, keep: 'ai' | 'manu
       .update(pgEndpoints)
       .set({ spec: row.manualSpec, manualSpec: null, isManuallyEdited: true, hasConflict: false, updatedAt: new Date() })
       .where(eq(pgEndpoints.id, id))
+    if (!specsEqual(row.manualSpec, row.spec)) await pgRecordVersion(db, id, row.manualSpec, 'manual')
   }
 }
 
@@ -214,6 +250,10 @@ export function createPostgresAdapter(url: string, poolSize?: number): DatabaseA
     getEndpointsByProject: async (projectId) => {
       const rows = await pgGetEndpointsByProject(db, projectId)
       return rows.map(toEndpoint)
+    },
+    getEndpointVersions: async (endpointId) => {
+      const rows = await pgGetEndpointVersions(db, endpointId)
+      return rows as unknown as SpecVersion[]
     },
     deleteEndpointById: (id) => pgDeleteById(db, id),
     saveManualSpec: (id, manualSpec) => pgSaveManualSpec(db, id, manualSpec),
