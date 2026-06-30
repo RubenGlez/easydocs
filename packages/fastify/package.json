@@ -36,7 +36,7 @@
     "fastify": "^5.0.0",
     "tsup": "^8.3.0",
     "typescript": "^5",
-    "vite": "8.0.13",
+    "vite": "8.1.0",
     "vitest": "^4.1.6"
   },
   "repository": {
