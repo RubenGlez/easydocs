@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { diffSpecs } from '@/lib/diff'
+import { diffSpecs } from '@easydocs/core/spec/diff'
 import type { Operation } from '@easydocs/core'
 
 type Version = {

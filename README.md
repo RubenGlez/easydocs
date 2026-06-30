@@ -11,6 +11,7 @@ EasyDocs watches your API traffic and uses AI to generate accurate, up-to-date O
 ## Why EasyDocs
 
 - **Local-first** — your traffic never leaves your machine. No cloud, fully self-hostable.
+- **PII-safe by default** — secrets and personal data (passwords, tokens, emails, card numbers) are detected and redacted before the payload reaches a hosted AI provider, and flagged in the docs.
 - **Open-source & free** — no SaaS lock-in, no paywalled features.
 - **Works fully offline** — point it at a local Ollama model; no API key required, and no model vendor ever sees your data.
 - **AI-generated, not just type-merged** — richer specs with real descriptions and detected auth schemes, not mechanical schema inference.
@@ -63,6 +64,39 @@ Or export to a file:
 npx easydocs export > openapi.json
 npx easydocs export --yaml > openapi.yaml
 ```
+
+---
+
+## Track API changes in pull requests
+
+Commit your exported spec (`openapi.json`) and let EasyDocs comment the field-level
+changes on every PR. Diff two spec files directly:
+
+```bash
+npx easydocs diff old.json new.json            # human-readable summary
+npx easydocs diff old.json new.json --markdown  # PR-comment Markdown
+```
+
+Or drop in the GitHub Action — it diffs the committed spec against the base branch
+and posts a sticky comment (updated in place on each push):
+
+```yaml
+# .github/workflows/easydocs.yml
+name: API spec diff
+on: pull_request
+permissions:
+  pull-requests: write
+jobs:
+  spec-diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: RubenGlez/easydocs@v1
+        with:
+          spec: openapi.json
+```
+
+The check is informational only — it comments the diff, it never fails the build.
 
 ---
 
@@ -132,12 +166,26 @@ easydocs({
     ignoreRoutes: ["/health", "/metrics"],
     includePaths: ["/api"],
   },
+  privacy: {
+    enabled: true, // on by default; detect & redact PII/secrets
+    placeholder: "[REDACTED]", // value substituted for sensitive fields
+    allowlist: ["public_token"], // key names never to flag
+    customRules: {
+      keyNames: ["internalRef"], // extra sensitive key names
+      valuePatterns: ["^INT-\\d+$"], // extra regex value matchers
+    },
+  },
   dashboard: {
     autoStart: true, // spawn dashboard on first capture (dev only)
     port: 4999,
   },
 });
 ```
+
+Detection is deterministic and fully offline. Values are redacted before being sent
+to a **hosted** provider (OpenAI/Anthropic/DeepSeek); with local Ollama nothing leaves
+the machine, so real values are kept for accuracy. Flagged fields are marked in the
+spec with `x-easydocs-sensitive` and shown with a badge in the dashboard.
 
 ---
 

@@ -3,6 +3,8 @@ import { buildOperation } from './spec/builder.js'
 import { createAdapter } from './storage/adapter.js'
 import { hashShape } from './shape.js'
 import { maybeStartDashboard } from './dashboard.js'
+import { detect, markSensitiveProperties } from './privacy/detect.js'
+import { resolveProvider } from './ai/provider.js'
 import type { CaptureEvent, EasyDocsConfig } from './types.js'
 
 const DEFAULT_PROJECT = 'default'
@@ -59,7 +61,21 @@ export function createCapturer(config: EasyDocsConfig): Capturer {
         const projectId = await adapter.findOrCreateProject(projectSlug)
         const existing = await adapter.getEndpointByPathMethod(projectId, event.path, event.method)
         if (existing?.responseHash === responseHash && existing?.spec) return
-        const spec = await buildOperation(event, existing?.spec ?? null, config.ai)
+
+        // Detect PII/secrets. Redact before sending to a hosted provider so values
+        // never leave the machine; for local Ollama keep real values (better
+        // accuracy, nothing leaves the box). Either way, flag the fields. See ADR 0009.
+        const privacyEnabled = config.privacy?.enabled !== false
+        let eventForAI = event
+        let sensitivePaths = new Set<string>()
+        if (privacyEnabled) {
+          const result = detect(event, config.privacy)
+          sensitivePaths = result.sensitivePaths
+          if (resolveProvider(config.ai) !== 'ollama') eventForAI = result.redactedEvent
+        }
+
+        const spec = await buildOperation(eventForAI, existing?.spec ?? null, config.ai)
+        markSensitiveProperties(spec, sensitivePaths)
         await adapter.upsertEndpoint(projectId, event.path, event.method, spec, responseHash)
       })
     },

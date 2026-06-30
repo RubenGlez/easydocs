@@ -25,6 +25,11 @@
       "import": "./dist/spec/schema.js",
       "require": "./dist/spec/schema.cjs",
       "types": "./dist/spec/schema.d.ts"
+    },
+    "./spec/diff": {
+      "import": "./dist/spec/diff.js",
+      "require": "./dist/spec/diff.cjs",
+      "types": "./dist/spec/diff.d.ts"
     }
   },
   "scripts": {

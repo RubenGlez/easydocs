@@ -1,9 +1,9 @@
 import { createDB, getAllEndpoints, getEndpointsByProject, findOrCreateProject, buildFullSpec } from '@easydocs/core'
-import { createCapturer, parseConfig } from '@easydocs/core'
+import { createCapturer, parseConfig, diffSpecs, renderDiff } from '@easydocs/core'
 import type { HttpMethod } from '@easydocs/core'
 import { createServer } from 'http'
 import { createRequire } from 'module'
-import { existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { spawn } from 'child_process'
 import yaml from 'js-yaml'
@@ -17,13 +17,16 @@ switch (command) {
   case 'export':
     await runExport(args)
     break
+  case 'diff':
+    runDiff(args)
+    break
   case 'proxy':
   case undefined:
     await runProxy(args)
     break
   default:
     console.error(
-      `Unknown command: ${command}\n\nUsage:\n  easydocs [proxy]           Start proxy server\n  easydocs dashboard         Start the docs dashboard\n  easydocs export            Export spec to stdout\n\nFlags:\n  --project=<slug>           Scope to a project (default: all)\n  --port=<n>                 Port for proxy (default: 3999) or dashboard (default: 4999)\n  --yaml                     Export as YAML instead of JSON\n  --prod                     Dashboard: run next start instead of next dev`
+      `Unknown command: ${command}\n\nUsage:\n  easydocs [proxy]           Start proxy server\n  easydocs dashboard         Start the docs dashboard\n  easydocs export            Export spec to stdout\n  easydocs diff <a> <b>      Diff two spec files (JSON or YAML)\n\nFlags:\n  --project=<slug>           Scope to a project (default: all)\n  --port=<n>                 Port for proxy (default: 3999) or dashboard (default: 4999)\n  --yaml                     Export as YAML instead of JSON\n  --markdown                 Diff: emit Markdown (for PR comments) instead of plain text\n  --prod                     Dashboard: run next start instead of next dev`
     )
     process.exit(1)
 }
@@ -114,6 +117,41 @@ async function runExport(args: string[]) {
   const spec = buildFullSpec(endpoints, projectSlug ?? undefined)
 
   process.stdout.write(format === 'yaml' ? yaml.dump(spec) : JSON.stringify(spec, null, 2))
+}
+
+// ─── Diff ───────────────────────────────────────────────────────────────────────
+
+function loadSpecFile(path: string): unknown {
+  let raw: string
+  try {
+    raw = readFileSync(path, 'utf8')
+  } catch {
+    console.error(`[EasyDocs] Cannot read spec file: ${path}`)
+    process.exit(2)
+  }
+  try {
+    // YAML is a superset of JSON, so js-yaml parses both .json and .yaml.
+    return yaml.load(raw)
+  } catch {
+    console.error(`[EasyDocs] Failed to parse spec file (not valid JSON or YAML): ${path}`)
+    process.exit(2)
+  }
+}
+
+function runDiff(args: string[]) {
+  const positionals = args.filter((a) => !a.startsWith('--'))
+  const [beforePath, afterPath] = positionals
+  if (!beforePath || !afterPath) {
+    console.error('Usage: easydocs diff <before> <after> [--markdown]')
+    process.exit(2)
+  }
+
+  const before = loadSpecFile(beforePath)
+  const after = loadSpecFile(afterPath)
+  const markdown = args.includes('--markdown')
+
+  // Comment-only feature: a diff is informational, so we always exit 0.
+  process.stdout.write(renderDiff(diffSpecs(before, after), { markdown }) + '\n')
 }
 
 // ─── Proxy ────────────────────────────────────────────────────────────────────

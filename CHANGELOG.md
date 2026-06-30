@@ -5,6 +5,25 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- PII / secret detection: EasyDocs spots sensitive fields (passwords, tokens,
+  emails, card numbers, secrets) in captured traffic and redacts their values
+  before anything is sent to a hosted AI provider (OpenAI/Anthropic/DeepSeek),
+  so secrets never leave your machine; with a local Ollama model nothing is
+  redacted because nothing leaves the machine. Detected fields are flagged in
+  the spec and shown with a "sensitive" badge in the dashboard. On by default;
+  configurable via a `privacy` block (enable/disable, custom placeholder,
+  allowlist, custom rules).
+- Spec diffs on pull requests: a new `easydocs diff <before> <after>` command
+  reports the field-level changes (added/removed/changed) between two OpenAPI
+  spec files, reads JSON or YAML, and takes a `--markdown` flag for PR-ready
+  output. A reusable GitHub Action wraps this for committed-spec workflows: it
+  diffs your spec against the PR's base branch and posts the changes as a
+  sticky pull-request comment (updated in place). It's informational only and
+  never fails the build.
+
 ## [0.6.0] - 2026-06-30
 
 ### Added

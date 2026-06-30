@@ -11,7 +11,7 @@ const DEFAULT_MODELS = {
   deepseek: 'deepseek-chat',
 }
 
-type Provider = 'openai' | 'anthropic' | 'ollama' | 'deepseek'
+export type Provider = 'openai' | 'anthropic' | 'ollama' | 'deepseek'
 
 // Precedence when no explicit provider is set:
 //   1. ANTHROPIC_API_KEY → anthropic
@@ -27,8 +27,13 @@ function detectProvider(hasExplicitApiKey: boolean): Provider {
   return 'ollama'
 }
 
+/** Resolve which provider a config maps to, mirroring resolveModel's selection. */
+export function resolveProvider(config?: AIConfig): Provider {
+  return config?.provider ?? detectProvider(!!config?.apiKey)
+}
+
 export function resolveModel(config?: AIConfig): LanguageModel {
-  const provider: Provider = config?.provider ?? detectProvider(!!config?.apiKey)
+  const provider: Provider = resolveProvider(config)
   const model = config?.model ?? DEFAULT_MODELS[provider]
 
   switch (provider) {

@@ -5,6 +5,7 @@ export default defineConfig({
     index: 'src/index.ts',
     'storage/schema': 'src/storage/schema.ts',
     'spec/schema': 'src/spec/schema.ts',
+    'spec/diff': 'src/spec/diff.ts',
     dashboard: 'src/dashboard.ts',
   },
   format: ['esm', 'cjs'],

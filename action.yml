@@ -1,0 +1,83 @@
+name: 'EasyDocs Spec Diff'
+description: 'Diff the committed OpenAPI spec against the PR base branch and post the changes as a sticky pull-request comment.'
+author: 'EasyDocs'
+branding:
+  icon: 'git-pull-request'
+  color: 'blue'
+
+inputs:
+  spec:
+    description: 'Path to the committed OpenAPI spec file.'
+    required: false
+    default: 'openapi.json'
+  project:
+    description: 'Optional project slug (informational; the committed spec is diffed as-is).'
+    required: false
+  github-token:
+    description: 'Token used to post the pull-request comment.'
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Compute spec diff
+      id: diff
+      shell: bash
+      run: |
+        set -euo pipefail
+        SPEC="${{ inputs.spec }}"
+        BASE_REF="${{ github.event.pull_request.base.ref }}"
+
+        if [ -z "$BASE_REF" ]; then
+          echo "[EasyDocs] Not a pull_request event; nothing to diff." >&2
+          exit 0
+        fi
+        if [ ! -f "$SPEC" ]; then
+          echo "[EasyDocs] Spec file not found on the PR branch: $SPEC" >&2
+          exit 1
+        fi
+
+        git fetch --no-tags --depth=1 origin "$BASE_REF"
+
+        BASE_FILE="$(mktemp)"
+        if ! git show "origin/$BASE_REF:$SPEC" > "$BASE_FILE" 2>/dev/null; then
+          # First adoption: no spec on the base branch yet → treat as all-added.
+          echo "{}" > "$BASE_FILE"
+        fi
+
+        OUT="$(npx --yes @easydocs/cli diff "$BASE_FILE" "$SPEC" --markdown)"
+        {
+          echo "markdown<<EASYDOCS_EOF"
+          echo "$OUT"
+          echo "EASYDOCS_EOF"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Post sticky PR comment
+      uses: actions/github-script@v7
+      env:
+        DIFF_MD: ${{ steps.diff.outputs.markdown }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const marker = '<!-- easydocs-spec-diff -->'
+          const diff = process.env.DIFF_MD || '**No API spec changes.**'
+          const body = `${marker}\n## EasyDocs — API spec changes\n\n${diff}`
+
+          const { owner, repo } = context.repo
+          const issue_number = context.issue.number
+          if (!issue_number) {
+            core.info('Not a pull request; skipping comment.')
+            return
+          }
+
+          const comments = await github.paginate(github.rest.issues.listComments, {
+            owner, repo, issue_number,
+          })
+          const existing = comments.find((c) => c.body && c.body.includes(marker))
+
+          if (existing) {
+            await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body })
+          } else {
+            await github.rest.issues.createComment({ owner, repo, issue_number, body })
+          }

@@ -39,18 +39,32 @@ const CaptureConfigSchema = z.object({
   maxBodySize: z.number().int().positive().optional(),
 }).strict()
 
+const PrivacyRulesSchema = z.object({
+  keyNames: z.array(z.string()).optional(),
+  valuePatterns: z.array(z.string()).optional(),
+}).strict()
+
+const PrivacyConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  placeholder: z.string().optional(),
+  allowlist: z.array(z.string()).optional(),
+  customRules: PrivacyRulesSchema.optional(),
+}).strict()
+
 export const EasyDocsConfigSchema = z.object({
   project: z.string().min(1).optional(),
   ai: AIConfigSchema.optional(),
   storage: StorageConfigSchema.optional(),
   dashboard: DashboardConfigSchema.optional(),
   capture: CaptureConfigSchema.optional(),
+  privacy: PrivacyConfigSchema.optional(),
 }).strict()
 
 export type AIConfig = z.infer<typeof AIConfigSchema>
 export type StorageConfig = z.infer<typeof StorageConfigSchema>
 export type DashboardConfig = z.infer<typeof DashboardConfigSchema>
 export type CaptureConfig = z.infer<typeof CaptureConfigSchema>
+export type PrivacyConfig = z.infer<typeof PrivacyConfigSchema>
 export type EasyDocsConfig = z.infer<typeof EasyDocsConfigSchema>
 
 export function parseConfig(config?: unknown): EasyDocsConfig {

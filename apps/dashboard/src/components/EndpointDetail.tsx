@@ -100,6 +100,7 @@ export function EndpointDetail({ endpoint: initial }: { endpoint: Endpoint }) {
                           {param.in}
                         </span>
                         {param.required && <span className="text-xs text-red-400">required</span>}
+                        {(param as Record<string, unknown>)['x-easydocs-sensitive'] === true && <SensitiveBadge />}
                         {param.deprecated && (
                           <span className="text-xs font-medium text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 px-1.5 py-0.5 rounded">
                             deprecated
@@ -201,6 +202,15 @@ type JsonSchema = {
   properties?: Record<string, JsonSchema>
   required?: string[]
   items?: JsonSchema
+  'x-easydocs-sensitive'?: boolean
+}
+
+function SensitiveBadge() {
+  return (
+    <span className="text-xs font-medium text-rose-400 bg-rose-500/10 border border-rose-500/30 px-1.5 py-0.5 rounded">
+      sensitive
+    </span>
+  )
 }
 
 function ContentFields({ content }: { content: Record<string, { schema?: JsonSchema }> }) {
@@ -271,6 +281,7 @@ function PropertiesTable({
                   ) : (
                     <span className="text-xs text-zinc-600">optional</span>
                   )}
+                  {schema['x-easydocs-sensitive'] && <SensitiveBadge />}
                   {schema.description && (
                     <p className="text-sm text-zinc-500 mt-1 w-full">{schema.description}</p>
                   )}
