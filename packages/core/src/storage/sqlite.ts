@@ -1,6 +1,6 @@
 import { createClient } from '@libsql/client'
 import { drizzle } from 'drizzle-orm/libsql'
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import { endpoints, projects, specVersions } from './schema.js'
 import { specsEqual } from './versions.js'
 import type { Operation } from '../spec/schema.js'
@@ -100,11 +100,13 @@ async function recordVersion(db: DB, endpointId: string, spec: Operation, source
 }
 
 export async function getEndpointVersions(db: DB, endpointId: string) {
+  // created_at is second-granularity; rowid (insertion order) breaks same-second
+  // ties so the list is deterministically newest-first regardless of query plan.
   return db
     .select()
     .from(specVersions)
     .where(eq(specVersions.endpointId, endpointId))
-    .orderBy(desc(specVersions.createdAt))
+    .orderBy(desc(specVersions.createdAt), sql`rowid desc`)
     .all()
 }
 

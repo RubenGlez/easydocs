@@ -206,4 +206,13 @@ describe('spec version history', () => {
     expect(await adapter.getEndpointVersions(a)).toHaveLength(1)
     expect(await adapter.getEndpointVersions(b)).toHaveLength(1)
   })
+
+  it('lists versions newest-first even when written in the same second', async () => {
+    const projectId = await adapter.findOrCreateProject('api')
+    const id = await adapter.upsertEndpoint(projectId, '/u', 'GET', { summary: 'v1', responses: {} }, 'h1')
+    await adapter.upsertEndpoint(projectId, '/u', 'GET', { summary: 'v2', responses: {} }, 'h2')
+    await adapter.upsertEndpoint(projectId, '/u', 'GET', { summary: 'v3', responses: {} }, 'h3')
+    const versions = await adapter.getEndpointVersions(id)
+    expect(versions.map((v) => v.spec?.summary)).toEqual(['v3', 'v2', 'v1'])
+  })
 })
