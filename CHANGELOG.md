@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   diffs your spec against the PR's base branch and posts the changes as a
   sticky pull-request comment (updated in place). It's informational only and
   never fails the build.
+- tRPC adapter: a new `@easydocs/trpc` package brings EasyDocs to tRPC (v11+).
+  Attach the middleware to your base procedure and every procedure built from it
+  is documented: queries as `GET /trpc/<procedure>`, mutations as
+  `POST /trpc/<procedure>`.
 
 ## [0.6.0] - 2026-06-30
 

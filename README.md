@@ -122,6 +122,7 @@ The check is informational only — it comments the diff, it never fails the bui
 | [`@easydocs/nextjs`](./packages/nextjs)   | Next.js (App Router + Pages Router)  |
 | [`@easydocs/h3`](./packages/h3)           | h3 / Nitro / Nuxt                    |
 | [`@easydocs/elysia`](./packages/elysia)   | Elysia (Bun)                         |
+| [`@easydocs/trpc`](./packages/trpc)       | tRPC                                 |
 | [`@easydocs/cli`](./packages/cli)         | Proxy + export (no framework needed) |
 
 ---
