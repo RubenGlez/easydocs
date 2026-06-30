@@ -6,7 +6,15 @@
 
 **Add one line. Get OpenAPI docs from real traffic.**
 
-EasyDocs watches your API traffic and uses AI to generate accurate, up-to-date OpenAPI 3.0 specs — automatically. No spec files to write, no annotations to maintain.
+EasyDocs watches your API traffic and uses AI to generate accurate, up-to-date OpenAPI 3.0 specs — automatically. No spec files to write, no annotations to maintain. Your docs describe what the API actually does, not what you thought it did when you last touched the YAML.
+
+## Why EasyDocs
+
+- **Local-first** — your traffic never leaves your machine. No cloud, fully self-hostable.
+- **Open-source & free** — no SaaS lock-in, no paywalled features.
+- **Works fully offline** — point it at a local Ollama model; no API key required, and no model vendor ever sees your data.
+- **AI-generated, not just type-merged** — richer specs with real descriptions and detected auth schemes, not mechanical schema inference.
+- **Framework-native accuracy** — adapters capture true route templates (`/users/:id`), not the concrete URLs (`/users/123`) a proxy sees.
 
 ## Two ways to get started
 
