@@ -72,6 +72,4 @@ Auto-detection precedence (when no explicit `provider` is set):
 | `ANTHROPIC_API_KEY` | Anthropic Claude |
 | `DEEPSEEK_API_KEY` | DeepSeek |
 | `OPENAI_API_KEY` | OpenAI GPT-4o |
-
-Set `provider: 'ollama'` explicitly to run fully offline against a local Ollama
-server at `localhost:11434`.
+| none | Ollama at `localhost:11434` (fully offline) |

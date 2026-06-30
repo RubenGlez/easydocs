@@ -100,6 +100,13 @@ describe('resolveModel', () => {
       })
     })
 
+    it('falls back to ollama (offline) when no API key is set', () => {
+      withEnv(NO_KEYS, () => {
+        const model = concrete(resolveModel())
+        expect(model.modelId).toBe('llama3.2')
+      })
+    })
+
     it('anthropic takes priority over deepseek when both keys are set', () => {
       withEnv({ ...NO_KEYS, ANTHROPIC_API_KEY: 'sk-ant-test', DEEPSEEK_API_KEY: 'sk-test' }, () => {
         const model = concrete(resolveModel())

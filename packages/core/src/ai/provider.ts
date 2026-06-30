@@ -16,13 +16,15 @@ type Provider = 'openai' | 'anthropic' | 'ollama' | 'deepseek'
 // Precedence when no explicit provider is set:
 //   1. ANTHROPIC_API_KEY → anthropic
 //   2. DEEPSEEK_API_KEY  → deepseek
-//   3. otherwise         → openai (works even without OPENAI_API_KEY, e.g. local proxies)
+//   3. OPENAI_API_KEY    → openai
+//   4. no key            → ollama (fully offline against a local server)
 // If the caller supplied an explicit apiKey without a provider, assume openai.
 function detectProvider(hasExplicitApiKey: boolean): Provider {
   if (hasExplicitApiKey) return 'openai'
   if (process.env.ANTHROPIC_API_KEY) return 'anthropic'
   if (process.env.DEEPSEEK_API_KEY) return 'deepseek'
-  return 'openai'
+  if (process.env.OPENAI_API_KEY) return 'openai'
+  return 'ollama'
 }
 
 export function resolveModel(config?: AIConfig): LanguageModel {

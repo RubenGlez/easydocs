@@ -15,11 +15,20 @@ function warnIfNoAIKey(config: EasyDocsConfig) {
     process.env.OPENAI_API_KEY ||
     process.env.ANTHROPIC_API_KEY ||
     process.env.DEEPSEEK_API_KEY
-  if (!hasKey) {
+  if (hasKey) return
+
+  if (provider) {
+    // An explicit hosted provider was chosen but has no key — specs can't generate.
     console.warn(
-      '\n[EasyDocs] No AI key found. Specs will not be generated.\n' +
-      '  Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or DEEPSEEK_API_KEY in your environment,\n' +
-      '  or configure { ai: { provider: "ollama" } } to use a local model.\n'
+      `\n[EasyDocs] No API key found for provider "${provider}". Specs will not be generated.\n` +
+      '  Set the matching API key, or use { ai: { provider: "ollama" } } for a local model.\n'
+    )
+  } else {
+    // No provider and no key → auto-fallback to a local Ollama server.
+    console.warn(
+      '\n[EasyDocs] No AI key found — falling back to local Ollama at localhost:11434.\n' +
+      '  Make sure Ollama is running (https://ollama.com), or set OPENAI_API_KEY,\n' +
+      '  ANTHROPIC_API_KEY, or DEEPSEEK_API_KEY to use a hosted provider.\n'
     )
   }
 }
