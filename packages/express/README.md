@@ -31,7 +31,7 @@ The documentation dashboard runs at `http://localhost:4999` (start it with `npx 
 ```ts
 app.use(easydocs({
   ai: {
-    provider: 'anthropic', // 'openai' | 'anthropic' | 'ollama'
+    provider: 'anthropic', // 'openai' | 'anthropic' | 'deepseek' | 'ollama'
     model: 'claude-3-5-sonnet-20241022',
   },
   storage: {

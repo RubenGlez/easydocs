@@ -58,7 +58,7 @@ export class UsersController {}
 ```ts
 EasyDocsModule.forRoot({
   ai: {
-    provider: 'openai', // 'openai' | 'anthropic' | 'ollama'
+    provider: 'openai', // 'openai' | 'anthropic' | 'deepseek' | 'ollama'
     model: 'gpt-4o',
     apiKey: process.env.OPENAI_API_KEY,
   },

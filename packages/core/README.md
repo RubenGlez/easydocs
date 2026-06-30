@@ -9,7 +9,7 @@ You don't need to install this directly. Framework adapters (`@easydocs/express`
 - Captures HTTP traffic from middleware adapters
 - Runs a background queue so captures never block requests
 - Detects response shape changes and only re-runs AI when needed (sampling)
-- Generates OpenAPI 3.0 Operation objects via OpenAI, Anthropic, or Ollama
+- Generates OpenAPI 3.0 Operation objects via OpenAI, Anthropic, DeepSeek, or Ollama
 - Stores specs in SQLite (default) or Postgres
 - Detects auth schemes from request headers and documents them
 
@@ -42,9 +42,9 @@ capturer.capture(buildCaptureEvent({
 {
   project: 'my-api',           // project slug, default: 'default'
   ai: {
-    provider: 'openai',        // 'openai' | 'anthropic' | 'ollama'
+    provider: 'openai',        // 'openai' | 'anthropic' | 'deepseek' | 'ollama'
     model: 'gpt-4o',
-    apiKey: '...',             // falls back to OPENAI_API_KEY / ANTHROPIC_API_KEY
+    apiKey: '...',             // falls back to OPENAI_API_KEY / ANTHROPIC_API_KEY / DEEPSEEK_API_KEY
     baseUrl: '...',            // for custom OpenAI-compatible endpoints
   },
   storage: {
@@ -65,8 +65,13 @@ capturer.capture(buildCaptureEvent({
 
 ## AI provider detection
 
+Auto-detection precedence (when no explicit `provider` is set):
+
 | Environment variable | Provider used |
 |----------------------|---------------|
 | `ANTHROPIC_API_KEY` | Anthropic Claude |
+| `DEEPSEEK_API_KEY` | DeepSeek |
 | `OPENAI_API_KEY` | OpenAI GPT-4o |
-| neither | Ollama at localhost:11434 |
+
+Set `provider: 'ollama'` explicitly to run fully offline against a local Ollama
+server at `localhost:11434`.
