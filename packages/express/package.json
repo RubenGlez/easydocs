@@ -1,6 +1,6 @@
 {
   "name": "@easydocs/express",
-  "version": "0.5.5",
+  "version": "0.6.0",
   "files": [
     "dist",
     "README.md"
