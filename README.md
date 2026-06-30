@@ -47,6 +47,8 @@ npx easydocs dashboard
 # → http://localhost:4999
 ```
 
+The dashboard also tracks version history: each endpoint records how its spec evolved over time, with a field-level diff between any two versions.
+
 Or export to a file:
 
 ```bash
@@ -87,7 +89,7 @@ npx easydocs export --yaml > openapi.yaml
 Set one environment variable:
 
 ```bash
-# OpenAI (default)
+# OpenAI
 OPENAI_API_KEY=sk-...
 
 # Anthropic
