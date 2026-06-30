@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createTestAdapter } from '../storage/sqlite.js'
+import { randomUUID } from 'node:crypto'
+import {
+  createTestAdapter,
+  createTestDB,
+  findOrCreateProject,
+  upsertEndpoint,
+  getEndpointVersions,
+} from '../storage/sqlite.js'
+import { endpoints } from '../storage/schema.js'
 import type { DatabaseAdapter } from '../storage/adapter.js'
 
 const MOCK_SPEC = {
@@ -214,5 +222,25 @@ describe('spec version history', () => {
     await adapter.upsertEndpoint(projectId, '/u', 'GET', { summary: 'v3', responses: {} }, 'h3')
     const versions = await adapter.getEndpointVersions(id)
     expect(versions.map((v) => v.spec?.summary)).toEqual(['v3', 'v2', 'v1'])
+  })
+
+  it('backfills the existing spec as a baseline for a pre-feature endpoint', async () => {
+    const db = await createTestDB()
+    const projectId = await findOrCreateProject(db, 'api')
+    // Simulate a legacy endpoint: a row with a spec but no spec_versions.
+    const legacyId = randomUUID()
+    await db.insert(endpoints).values({
+      id: legacyId,
+      projectId,
+      path: '/legacy',
+      method: 'GET',
+      spec: { summary: 'old', responses: {} },
+      responseHash: 'h0',
+    })
+    expect(await getEndpointVersions(db, legacyId)).toHaveLength(0)
+
+    await upsertEndpoint(db, projectId, '/legacy', 'GET', { summary: 'new', responses: {} }, 'h1')
+    const versions = await getEndpointVersions(db, legacyId)
+    expect(versions.map((v) => v.spec?.summary)).toEqual(['new', 'old'])
   })
 })

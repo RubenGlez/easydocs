@@ -99,6 +99,16 @@ async function recordVersion(db: DB, endpointId: string, spec: Operation, source
   await db.insert(specVersions).values({ id: crypto.randomUUID(), endpointId, spec, source })
 }
 
+async function hasVersions(db: DB, endpointId: string) {
+  const row = await db
+    .select({ id: specVersions.id })
+    .from(specVersions)
+    .where(eq(specVersions.endpointId, endpointId))
+    .limit(1)
+    .get()
+  return !!row
+}
+
 export async function getEndpointVersions(db: DB, endpointId: string) {
   // created_at is second-granularity; rowid (insertion order) breaks same-second
   // ties so the list is deterministically newest-first regardless of query plan.
@@ -137,7 +147,14 @@ export async function upsertEndpoint(
       .update(endpoints)
       .set({ spec, responseHash, hasConflict, updatedAt: new Date() })
       .where(eq(endpoints.id, existing.id))
-    if (!specsEqual(spec, existing.spec)) await recordVersion(db, existing.id, spec, 'ai')
+    if (!specsEqual(spec, existing.spec)) {
+      // Endpoints created before version history have no versions; backfill the
+      // prior spec as a baseline so this first change has something to diff against.
+      if (existing.spec && !(await hasVersions(db, existing.id))) {
+        await recordVersion(db, existing.id, existing.spec, 'ai')
+      }
+      await recordVersion(db, existing.id, spec, 'ai')
+    }
     return existing.id
   }
 
@@ -209,7 +226,7 @@ export async function deleteEndpointById(db: DB, id: string) {
   await db.delete(endpoints).where(eq(endpoints.id, id))
 }
 
-async function createTestDB() {
+export async function createTestDB() {
   const client = createClient({ url: ':memory:' })
   await client.executeMultiple(INIT_SQL)
   return drizzle(client, { schema: { projects, endpoints, specVersions } })

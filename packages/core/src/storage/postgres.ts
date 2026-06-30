@@ -114,6 +114,16 @@ async function pgRecordVersion(db: PgDB, endpointId: string, spec: Operation, so
   await db.insert(pgSpecVersions).values({ endpointId, spec, source })
 }
 
+async function pgHasVersions(db: PgDB, endpointId: string) {
+  const row = await db
+    .select({ id: pgSpecVersions.id })
+    .from(pgSpecVersions)
+    .where(eq(pgSpecVersions.endpointId, endpointId))
+    .limit(1)
+    .then((r) => r[0])
+  return !!row
+}
+
 export async function pgGetEndpointVersions(db: PgDB, endpointId: string) {
   return db
     .select()
@@ -150,7 +160,14 @@ export async function pgUpsertEndpoint(
       .update(pgEndpoints)
       .set({ spec, responseHash, hasConflict, updatedAt: new Date() })
       .where(eq(pgEndpoints.id, existing.id))
-    if (!specsEqual(spec, existing.spec)) await pgRecordVersion(db, existing.id, spec, 'ai')
+    if (!specsEqual(spec, existing.spec)) {
+      // Endpoints created before version history have no versions; backfill the
+      // prior spec as a baseline so this first change has something to diff against.
+      if (existing.spec && !(await pgHasVersions(db, existing.id))) {
+        await pgRecordVersion(db, existing.id, existing.spec, 'ai')
+      }
+      await pgRecordVersion(db, existing.id, spec, 'ai')
+    }
     return existing.id
   }
 
