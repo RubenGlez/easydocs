@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it against observed traffic, badges each drifted endpoint in the sidebar, and
   shows a panel breaking down undocumented / mismatch / unobserved findings. Served
   by a new local `/api/drift` route — the comparison never leaves the machine.
+- Strict offline mode (`privacy.offline: true`): a hard local-first guarantee for
+  regulated / air-gapped setups. EasyDocs pins itself to a local Ollama model,
+  ignores any hosted API keys present in the environment, and fails fast at startup
+  if a hosted provider is explicitly configured — so no captured payload can ever
+  reach a third-party service. `isHostedProvider` is exported from `@easydocs/core`.
 
 ## [0.7.0] - 2026-07-01
 

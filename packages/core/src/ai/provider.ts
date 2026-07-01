@@ -27,13 +27,33 @@ function detectProvider(hasExplicitApiKey: boolean): Provider {
   return 'ollama'
 }
 
-/** Resolve which provider a config maps to, mirroring resolveModel's selection. */
-export function resolveProvider(config?: AIConfig): Provider {
+/** The hosted providers that receive captured data over the network. Ollama is local. */
+export function isHostedProvider(provider: Provider): boolean {
+  return provider !== 'ollama'
+}
+
+/**
+ * Resolve which provider a config maps to, mirroring resolveModel's selection.
+ * In `offline` mode the provider is pinned to the local Ollama model (env keys are
+ * ignored), and an explicitly configured hosted provider is a hard error — nothing
+ * captured may ever leave the machine.
+ */
+export function resolveProvider(config?: AIConfig, offline?: boolean): Provider {
+  if (offline) {
+    if (config?.provider && isHostedProvider(config.provider)) {
+      throw new Error(
+        `[EasyDocs] privacy.offline is enabled but ai.provider is "${config.provider}", a hosted provider. ` +
+        'In offline mode EasyDocs only uses a local Ollama model so nothing leaves the machine. ' +
+        'Remove ai.provider or set it to "ollama".'
+      )
+    }
+    return 'ollama'
+  }
   return config?.provider ?? detectProvider(!!config?.apiKey)
 }
 
-export function resolveModel(config?: AIConfig): LanguageModel {
-  const provider: Provider = resolveProvider(config)
+export function resolveModel(config?: AIConfig, offline?: boolean): LanguageModel {
+  const provider: Provider = resolveProvider(config, offline)
   const model = config?.model ?? DEFAULT_MODELS[provider]
 
   switch (provider) {

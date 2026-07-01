@@ -102,6 +102,38 @@ describe('capture pipeline + privacy', () => {
     expect(props.password['x-easydocs-sensitive']).toBe(true)
   })
 
+  it('offline mode keeps values local even with a hosted key present, and never redacts', async () => {
+    const url = tmpDbUrl()
+    const capturer = createCapturer({
+      storage: { type: 'sqlite', url },
+      // A stray hosted key must not cause egress once offline mode is on.
+      ai: { apiKey: 'test-key' },
+      privacy: { offline: true },
+    })
+
+    capturer.capture(userSignup())
+    const endpoint = await waitForEndpoint(url)
+
+    // Pinned to a local model, so the real value is kept (nothing left the machine).
+    expect(prompts).toHaveLength(1)
+    expect(prompts[0]).toContain('hunter2')
+    expect(prompts[0]).not.toContain('[REDACTED]')
+
+    // Still flagged in the stored spec.
+    const props = endpoint.spec!.responses['200'].content!['application/json'].schema!.properties
+    expect(props.password['x-easydocs-sensitive']).toBe(true)
+  })
+
+  it('offline mode fails fast when a hosted provider is explicitly configured', () => {
+    expect(() =>
+      createCapturer({
+        storage: { type: 'sqlite', url: tmpDbUrl() },
+        ai: { provider: 'anthropic', apiKey: 'test-key' },
+        privacy: { offline: true },
+      })
+    ).toThrow(/offline/i)
+  })
+
   it('sends raw values when privacy is disabled', async () => {
     const url = tmpDbUrl()
     const capturer = createCapturer({
