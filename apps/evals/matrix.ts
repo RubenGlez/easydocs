@@ -17,7 +17,7 @@
 import { buildOperation } from '@easydocs/core'
 import { readFileSync, readdirSync } from 'fs'
 import { resolve, join } from 'path'
-import score from './score.ts'
+import score, { meanByDimension } from './score.ts'
 
 const DIR = import.meta.dirname
 try {
@@ -96,15 +96,16 @@ async function runModel(c: Candidate) {
       try {
         const spec = await buildOperation(fixture, null, { provider: c.provider, model: c.model })
         const r = score(JSON.stringify(spec), { vars: { fixture: rel } })
-        return { rel, score: r.score, reason: r.reason }
+        return { rel, score: r.score, reason: r.reason, named: r.namedScores }
       } catch (err) {
-        return { rel, score: 0, reason: `ERROR: ${String(err).slice(0, 120)}` }
+        return { rel, score: 0, reason: `ERROR: ${String(err).slice(0, 120)}`, named: undefined }
       }
     })
   )
   const mean = results.reduce((s, r) => s + r.score, 0) / results.length
   const worst = results.reduce((a, b) => (b.score < a.score ? b : a))
-  return { mean, worst, results }
+  const dims = meanByDimension(results.map((r) => r.named))
+  return { mean, worst, results, dims }
 }
 
 const label = (c: Candidate) => `${c.provider}/${c.model}`
@@ -153,7 +154,7 @@ if (GATE) {
   process.exit(0)
 }
 
-const ran: { c: Candidate; mean: number; worst: any }[] = []
+const ran: { c: Candidate; mean: number; worst: any; dims: Record<string, number> }[] = []
 const skipped: string[] = []
 
 for (const c of MATRIX) {
@@ -163,8 +164,8 @@ for (const c of MATRIX) {
   }
   // In markdown mode stdout is the report, so progress goes to stderr.
   ;(MARKDOWN ? process.stderr : process.stdout).write(`running ${label(c)} (${fixtures.length} fixtures)...\n`)
-  const { mean, worst, results } = await runModel(c)
-  ran.push({ c, mean, worst })
+  const { mean, worst, results, dims } = await runModel(c)
+  ran.push({ c, mean, worst, dims })
   if (!QUIET) {
     for (const r of results.filter((r) => r.score < 1)) {
       console.log(`   ${r.rel.replace('fixtures/', '').padEnd(38)} ${r.score.toFixed(3)}  ${r.reason}`)
@@ -173,6 +174,14 @@ for (const c of MATRIX) {
 }
 
 const sorted = ran.sort((a, b) => b.mean - a.mean)
+
+// The union of section names seen across all models, in a stable display order.
+const SECTION_ORDER = ['tags', 'responses', 'responseSchema', 'parameters', 'requestBody', 'security']
+const allDims = [
+  ...SECTION_ORDER.filter((d) => sorted.some((r) => d in r.dims)),
+  ...[...new Set(sorted.flatMap((r) => Object.keys(r.dims)))].filter((d) => !SECTION_ORDER.includes(d)).sort(),
+]
+const cell = (r: (typeof sorted)[number], d: string) => (d in r.dims ? r.dims[d].toFixed(2) : '—')
 
 if (MARKDOWN) {
   const lines: string[] = [
@@ -194,6 +203,14 @@ if (MARKDOWN) {
   if (sorted.length === 0) {
     lines.push('| _no models available_ | — | — |')
   }
+  if (allDims.length > 0) {
+    lines.push('', '## Accuracy by section', '', 'Where each model is strong or weak. A section only counts on the fixtures where it applies.', '')
+    lines.push(`| Model | ${allDims.join(' | ')} |`)
+    lines.push(`| ----- | ${allDims.map(() => '---').join(' | ')} |`)
+    for (const r of sorted) {
+      lines.push(`| \`${label(r.c)}\` | ${allDims.map((d) => cell(r, d)).join(' | ')} |`)
+    }
+  }
   if (skipped.length) {
     lines.push('', '**Skipped (no credentials):**', '')
     for (const s of skipped) lines.push(`- ${s}`)
@@ -205,6 +222,13 @@ if (MARKDOWN) {
   for (const r of sorted) {
     const w = `${r.worst.rel.replace('fixtures/', '')} (${r.worst.score.toFixed(2)})`
     console.log(label(r.c).padEnd(40), r.mean.toFixed(3), ' ', w)
+  }
+  if (allDims.length > 0) {
+    console.log('\n=== ACCURACY BY SECTION ===')
+    console.log('model'.padEnd(40), allDims.map((d) => d.slice(0, 8).padStart(8)).join(' '))
+    for (const r of sorted) {
+      console.log(label(r.c).padEnd(40), allDims.map((d) => cell(r, d).padStart(8)).join(' '))
+    }
   }
   if (skipped.length) {
     console.log('\n=== SKIPPED (no credentials) ===')

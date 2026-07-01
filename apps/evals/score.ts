@@ -18,6 +18,32 @@ type GradingResult = {
   namedScores?: Record<string, number>
 }
 
+/**
+ * Average each accuracy dimension across a set of per-fixture `namedScores`
+ * (the `acc:<dimension>` map score() returns). A dimension only counts on the
+ * fixtures where it applied, so e.g. `security` isn't dragged down by fixtures
+ * that have no auth. Returns dimension → mean, sorted for stable output.
+ */
+export function meanByDimension(
+  runs: Array<Record<string, number> | undefined>
+): Record<string, number> {
+  const acc: Record<string, { sum: number; count: number }> = {}
+  for (const run of runs) {
+    if (!run) continue
+    for (const [rawKey, value] of Object.entries(run)) {
+      const key = rawKey.startsWith('acc:') ? rawKey.slice(4) : rawKey
+      const entry = (acc[key] ??= { sum: 0, count: 0 })
+      entry.sum += value
+      entry.count += 1
+    }
+  }
+  return Object.fromEntries(
+    Object.keys(acc)
+      .sort()
+      .map((k) => [k, acc[k].sum / acc[k].count])
+  )
+}
+
 /** F1 over two string sets. Both empty → 1 (nothing expected, nothing produced). */
 function setF1(expected: string[], actual: string[]): number {
   const e = new Set(expected)

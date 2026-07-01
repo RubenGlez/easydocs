@@ -30,7 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Publishable accuracy scoreboard: `pnpm matrix --markdown` emits the per-provider/
   model spec-accuracy scoreboard as a committable Markdown report (progress goes to
   stderr so stdout is clean). Run it where provider keys are available:
-  `pnpm matrix --markdown > SCOREBOARD.md`.
+  `pnpm matrix --markdown > SCOREBOARD.md`. The scoreboard now also breaks accuracy
+  down **by spec section** (tags, responses, response schema, parameters, request
+  body, security) so it's clear where a model is strong or weak, not just its overall
+  mean. `meanByDimension` is exported from the eval scorer.
 - Redaction audit: EasyDocs can now show exactly which fields it protects. A new
   `collectSensitiveFields` helper (exported from `@easydocs/core` and the pure
   `@easydocs/core/privacy/audit` subpath) reads the `x-easydocs-sensitive` markers
