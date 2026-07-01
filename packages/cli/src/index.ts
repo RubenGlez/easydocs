@@ -1,5 +1,5 @@
 import { createDB, getAllEndpoints, getEndpointsByProject, findOrCreateProject, buildFullSpec } from '@easydocs/core'
-import { createCapturer, parseConfig, diffSpecs, renderDiff } from '@easydocs/core'
+import { createCapturer, parseConfig, diffSpecs, renderDiff, computeDrift, renderDrift } from '@easydocs/core'
 import type { HttpMethod } from '@easydocs/core'
 import { createServer } from 'http'
 import { createRequire } from 'module'
@@ -20,13 +20,16 @@ switch (command) {
   case 'diff':
     runDiff(args)
     break
+  case 'drift':
+    await runDrift(args)
+    break
   case 'proxy':
   case undefined:
     await runProxy(args)
     break
   default:
     console.error(
-      `Unknown command: ${command}\n\nUsage:\n  easydocs [proxy]           Start proxy server\n  easydocs dashboard         Start the docs dashboard\n  easydocs export            Export spec to stdout\n  easydocs diff <a> <b>      Diff two spec files (JSON or YAML)\n\nFlags:\n  --project=<slug>           Scope to a project (default: all)\n  --port=<n>                 Port for proxy (default: 3999) or dashboard (default: 4999)\n  --yaml                     Export as YAML instead of JSON\n  --markdown                 Diff: emit Markdown (for PR comments) instead of plain text\n  --prod                     Dashboard: run next start instead of next dev`
+      `Unknown command: ${command}\n\nUsage:\n  easydocs [proxy]           Start proxy server\n  easydocs dashboard         Start the docs dashboard\n  easydocs export            Export spec to stdout\n  easydocs diff <a> <b>      Diff two spec files (JSON or YAML)\n  easydocs drift <spec>      Check a committed spec against observed traffic\n\nFlags:\n  --project=<slug>           Scope to a project (default: all)\n  --port=<n>                 Port for proxy (default: 3999) or dashboard (default: 4999)\n  --yaml                     Export as YAML instead of JSON\n  --markdown                 Diff/drift: emit Markdown (for PR comments) instead of plain text\n  --prod                     Dashboard: run next start instead of next dev`
     )
     process.exit(1)
 }
@@ -152,6 +155,38 @@ function runDiff(args: string[]) {
 
   // Comment-only feature: a diff is informational, so we always exit 0.
   process.stdout.write(renderDiff(diffSpecs(before, after), { markdown }) + '\n')
+}
+
+// ─── Drift ────────────────────────────────────────────────────────────────────
+
+// Compare a committed spec against reality: the spec EasyDocs derives from
+// observed traffic. With one argument, "reality" is read from the local capture
+// DB (like export). With two, both sides come from files (handy for tests/CI).
+async function runDrift(args: string[]) {
+  const positionals = args.filter((a) => !a.startsWith('--'))
+  const [documentedPath, observedPath] = positionals
+  if (!documentedPath) {
+    console.error('Usage: easydocs drift <spec> [observed-spec] [--project=<slug>] [--markdown]')
+    process.exit(2)
+  }
+
+  const documented = loadSpecFile(documentedPath)
+
+  let observed: unknown
+  if (observedPath) {
+    observed = loadSpecFile(observedPath)
+  } else {
+    const projectSlug = getFlag(args, 'project')
+    const db = createDB(process.env.EASYDOCS_DB_URL)
+    const endpoints = projectSlug
+      ? await getEndpointsByProject(db, await findOrCreateProject(db, projectSlug))
+      : await getAllEndpoints(db)
+    observed = buildFullSpec(endpoints, projectSlug ?? undefined)
+  }
+
+  const markdown = args.includes('--markdown')
+  // Drift is an informational signal, never a build gate — always exit 0.
+  process.stdout.write(renderDrift(computeDrift(documented, observed), { markdown }) + '\n')
 }
 
 // ─── Proxy ────────────────────────────────────────────────────────────────────

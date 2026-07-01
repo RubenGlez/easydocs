@@ -30,6 +30,11 @@
       "import": "./dist/spec/diff.js",
       "require": "./dist/spec/diff.cjs",
       "types": "./dist/spec/diff.d.ts"
+    },
+    "./spec/drift": {
+      "import": "./dist/spec/drift.js",
+      "require": "./dist/spec/drift.cjs",
+      "types": "./dist/spec/drift.d.ts"
     }
   },
   "scripts": {

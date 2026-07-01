@@ -5,6 +5,19 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Docs-vs-reality drift detection: a new `easydocs drift <spec>` command compares
+  a committed OpenAPI spec against the spec EasyDocs derives from real traffic and
+  reports where documentation has diverged from reality — endpoints/fields observed
+  but undocumented, documented but never observed, and values that contradict what
+  traffic shows. With one argument it reads observed traffic from the local capture
+  DB; with two it compares spec files directly. Takes `--project` and `--markdown`
+  (for PR comments), and, like `diff`, is informational and never fails the build.
+  The engine is exported from `@easydocs/core` (`computeDrift` / `renderDrift`, also
+  at the `@easydocs/core/spec/drift` subpath).
+
 ## [0.7.0] - 2026-07-01
 
 ### Added

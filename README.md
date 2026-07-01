@@ -100,6 +100,27 @@ The check is informational only — it comments the diff, it never fails the bui
 
 ---
 
+## Catch drift between your docs and reality
+
+`diff` compares two spec *files*. **`drift` compares your committed spec against
+what your API actually does** — the spec EasyDocs derives from real traffic. It
+answers "is my spec still true?", not "did my spec change?".
+
+```bash
+npx easydocs drift openapi.json              # against locally captured traffic
+npx easydocs drift openapi.json --markdown   # PR-comment Markdown
+npx easydocs drift committed.json live.json  # or compare two files directly
+```
+
+It surfaces three kinds of divergence: endpoints and fields **observed in traffic
+but missing from your spec** (your docs are stale), things **documented but never
+observed** (dead or un-exercised), and values where your spec **contradicts**
+reality. This is the one check only EasyDocs can run — it's the only tool holding
+both the committed spec and the live traffic at the same time. Like `diff`, it's
+informational and never fails the build.
+
+---
+
 ## How it works
 
 1. Middleware (or proxy) intercepts every request and response

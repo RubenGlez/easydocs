@@ -25,6 +25,14 @@ export { buildOperation } from './spec/builder.js'
 export { buildFullSpec } from './spec/assemble.js'
 export { diffSpecs, renderDiff, isEmptyDiff } from './spec/diff.js'
 export type { SpecDiff, RenderDiffOptions } from './spec/diff.js'
+export { computeDrift, renderDrift, isEmptyDrift, driftCount } from './spec/drift.js'
+export type {
+  DriftReport,
+  DriftFinding,
+  DriftKind,
+  ComputeDriftOptions,
+  RenderDriftOptions,
+} from './spec/drift.js'
 export { OperationSchema } from './spec/schema.js'
 export type { Operation } from './spec/schema.js'
 export { buildCaptureEvent, tryParseJson } from './event.js'
