@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   model spec-accuracy scoreboard as a committable Markdown report (progress goes to
   stderr so stdout is clean). Run it where provider keys are available:
   `pnpm matrix --markdown > SCOREBOARD.md`.
+- Redaction audit: EasyDocs can now show exactly which fields it protects. A new
+  `collectSensitiveFields` helper (exported from `@easydocs/core` and the pure
+  `@easydocs/core/privacy/audit` subpath) reads the `x-easydocs-sensitive` markers
+  back out of a spec, and the dashboard surfaces them in a "Sensitive fields" panel
+  grouped by endpoint — making the PII-safe promise provable, not just a claim.
 
 ## [0.7.0] - 2026-07-01
 

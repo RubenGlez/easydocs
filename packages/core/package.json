@@ -35,6 +35,11 @@
       "import": "./dist/spec/drift.js",
       "require": "./dist/spec/drift.cjs",
       "types": "./dist/spec/drift.d.ts"
+    },
+    "./privacy/audit": {
+      "import": "./dist/privacy/audit.js",
+      "require": "./dist/privacy/audit.cjs",
+      "types": "./dist/privacy/audit.d.ts"
     }
   },
   "scripts": {

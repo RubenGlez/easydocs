@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { MethodBadge } from './MethodBadge'
 import { EndpointDetail } from './EndpointDetail'
 import { DriftSummary } from './DriftSummary'
+import { RedactionAudit, type AuditItem } from './RedactionAudit'
+import { collectSensitiveFields } from '@easydocs/core/privacy/audit'
 import type { Endpoint, Project } from '@easydocs/core/schema'
 import type { DriftData } from '@/lib/db'
 
@@ -19,7 +21,17 @@ export function Dashboard({ endpoints, projects, currentProject }: Props) {
   const [selected, setSelected] = useState<Endpoint | null>(endpoints[0] ?? null)
   const [search, setSearch] = useState('')
   const [drift, setDrift] = useState<DriftData | null>(null)
-  const [showDrift, setShowDrift] = useState(false)
+  const [panel, setPanel] = useState<'drift' | 'audit' | null>(null)
+
+  const audit = useMemo(() => {
+    const items: AuditItem[] = []
+    for (const e of endpoints) {
+      const spec = e.isManuallyEdited && e.manualSpec ? e.manualSpec : e.spec
+      const fields = spec ? collectSensitiveFields(spec) : []
+      if (fields.length > 0) items.push({ endpoint: e, fields })
+    }
+    return { items, total: items.reduce((s, x) => s + x.fields.length, 0) }
+  }, [endpoints])
 
   useEffect(() => {
     const q = currentProject ? `?project=${currentProject}` : ''
@@ -70,9 +82,9 @@ export function Dashboard({ endpoints, projects, currentProject }: Props) {
 
           {drift?.configured && (
             <button
-              onClick={() => setShowDrift((v) => !v)}
+              onClick={() => setPanel((p) => (p === 'drift' ? null : 'drift'))}
               className={`w-full flex items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors ${
-                showDrift
+                panel === 'drift'
                   ? 'bg-zinc-800 text-zinc-100'
                   : drift.total > 0
                     ? 'bg-rose-500/10 text-rose-300 hover:bg-rose-500/20'
@@ -85,6 +97,22 @@ export function Dashboard({ endpoints, projects, currentProject }: Props) {
                   {drift.total}
                 </span>
               )}
+            </button>
+          )}
+
+          {audit.total > 0 && (
+            <button
+              onClick={() => setPanel((p) => (p === 'audit' ? null : 'audit'))}
+              className={`w-full flex items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors ${
+                panel === 'audit'
+                  ? 'bg-zinc-800 text-zinc-100'
+                  : 'bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+              }`}
+            >
+              <span>Sensitive fields</span>
+              <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-emerald-300">
+                {audit.total}
+              </span>
             </button>
           )}
 
@@ -178,8 +206,10 @@ export function Dashboard({ endpoints, projects, currentProject }: Props) {
 
       {/* Main */}
       <main className="flex-1 overflow-hidden">
-        {showDrift && drift?.configured ? (
+        {panel === 'drift' && drift?.configured ? (
           <DriftSummary report={drift.report} specPath={drift.specPath} />
+        ) : panel === 'audit' ? (
+          <RedactionAudit items={audit.items} total={audit.total} />
         ) : selected ? (
           <EndpointDetail key={selected.id} endpoint={selected} />
         ) : (
