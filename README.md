@@ -4,18 +4,18 @@
 
 # EasyDocs
 
-**Add one line. Get OpenAPI docs from real traffic.**
+**The API spec you can actually trust — generated on your machine, from real traffic.**
 
-EasyDocs watches your API traffic and uses AI to generate accurate, up-to-date OpenAPI 3.0 specs — automatically. No spec files to write, no annotations to maintain. Your docs describe what the API actually does, not what you thought it did when you last touched the YAML.
+EasyDocs generates accurate, up-to-date OpenAPI 3.0 specs from your API's real traffic, running entirely on your machine with nothing sent to anyone. Add one line; no spec files to write, no annotations to maintain. Your docs describe what the API actually does, not what you thought it did when you last touched the YAML. (Under the hood an AI model turns observed requests and responses into the spec — richer than mechanical type-merging — and you stay in control of what ships.)
 
 ## Why EasyDocs
 
 - **Local-first** — your traffic never leaves your machine. No cloud, fully self-hostable.
+- **Works fully offline** — point it at a local Ollama model; no API key required, and no model vendor ever sees your data.
 - **PII-safe by default** — secrets and personal data (passwords, tokens, emails, card numbers) are detected and redacted before the payload reaches a hosted AI provider, and flagged in the docs.
 - **Open-source & free** — no SaaS lock-in, no paywalled features.
-- **Works fully offline** — point it at a local Ollama model; no API key required, and no model vendor ever sees your data.
-- **AI-generated, not just type-merged** — richer specs with real descriptions and detected auth schemes, not mechanical schema inference.
 - **Framework-native accuracy** — adapters capture true route templates (`/users/:id`), not the concrete URLs (`/users/123`) a proxy sees.
+- **Accurate, not mechanical** — an AI model reads real requests and responses to produce richer specs (real descriptions, detected auth schemes), not the bare schema a type-merger infers. Accuracy is measured against hand-written ground truth — see the [benchmark](./BENCHMARK.md).
 
 ## Two ways to get started
 

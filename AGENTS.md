@@ -14,7 +14,10 @@ is not set up for CI-triggered publish.
 
 `apps/evals` is `private` and never published; it holds the AI spec-accuracy
 eval harness (`pnpm --filter easydocs-evals eval`, and `pnpm matrix` for the
-per-provider/model accuracy scoreboard).
+per-provider/model accuracy scoreboard). The published, human-readable results
+live in `BENCHMARK.md` at the repo root; regenerate its table with
+`pnpm --filter easydocs-evals matrix --markdown`. Publishing the benchmark is a
+deliberate trust/reputation move — see `.harness/product/strategy.md`.
 
 ## CI
 
