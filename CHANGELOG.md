@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (for PR comments), and, like `diff`, is informational and never fails the build.
   The engine is exported from `@easydocs/core` (`computeDrift` / `renderDrift`, also
   at the `@easydocs/core/spec/drift` subpath).
+- Dashboard drift view: the dashboard now surfaces docs-vs-reality drift. It reads
+  the committed spec from `EASYDOCS_SPEC_PATH` (default `./openapi.json`), compares
+  it against observed traffic, badges each drifted endpoint in the sidebar, and
+  shows a panel breaking down undocumented / mismatch / unobserved findings. Served
+  by a new local `/api/drift` route — the comparison never leaves the machine.
 
 ## [0.7.0] - 2026-07-01
 

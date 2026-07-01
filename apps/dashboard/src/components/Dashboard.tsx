@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { MethodBadge } from './MethodBadge'
 import { EndpointDetail } from './EndpointDetail'
+import { DriftSummary } from './DriftSummary'
 import type { Endpoint, Project } from '@easydocs/core/schema'
+import type { DriftData } from '@/lib/db'
 
 interface Props {
   endpoints: Endpoint[]
@@ -16,6 +18,18 @@ export function Dashboard({ endpoints, projects, currentProject }: Props) {
   const router = useRouter()
   const [selected, setSelected] = useState<Endpoint | null>(endpoints[0] ?? null)
   const [search, setSearch] = useState('')
+  const [drift, setDrift] = useState<DriftData | null>(null)
+  const [showDrift, setShowDrift] = useState(false)
+
+  useEffect(() => {
+    const q = currentProject ? `?project=${currentProject}` : ''
+    let active = true
+    fetch(`/api/drift${q}`)
+      .then((r) => r.json())
+      .then((d: DriftData) => { if (active) setDrift(d) })
+      .catch(() => { /* drift is best-effort; ignore fetch errors */ })
+    return () => { active = false }
+  }, [currentProject])
 
   const filtered = useMemo(
     () =>
@@ -53,6 +67,26 @@ export function Dashboard({ endpoints, projects, currentProject }: Props) {
             <span className="text-sm font-semibold text-zinc-100">EasyDocs</span>
             <span className="text-xs text-zinc-500">{endpoints.length} endpoints</span>
           </div>
+
+          {drift?.configured && (
+            <button
+              onClick={() => setShowDrift((v) => !v)}
+              className={`w-full flex items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors ${
+                showDrift
+                  ? 'bg-zinc-800 text-zinc-100'
+                  : drift.total > 0
+                    ? 'bg-rose-500/10 text-rose-300 hover:bg-rose-500/20'
+                    : 'bg-zinc-900 text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              <span>{drift.total > 0 ? 'Docs-vs-reality drift' : 'In sync with spec'}</span>
+              {drift.total > 0 && (
+                <span className="rounded-full bg-rose-500/20 px-1.5 py-0.5 text-rose-300">
+                  {drift.total}
+                </span>
+              )}
+            </button>
+          )}
 
           {projects.length > 1 && (
             <select
@@ -110,6 +144,12 @@ export function Dashboard({ endpoints, projects, currentProject }: Props) {
                   >
                     <MethodBadge method={e.method} />
                     <span className="text-xs font-mono truncate flex-1">{e.path}</span>
+                    {drift?.byEndpoint[e.id] && (
+                      <span
+                        title={`${drift.byEndpoint[e.id]} drift finding(s)`}
+                        className="w-1.5 h-1.5 rounded-full bg-rose-400 flex-shrink-0"
+                      />
+                    )}
                     {e.hasConflict && (
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
                     )}
@@ -138,7 +178,9 @@ export function Dashboard({ endpoints, projects, currentProject }: Props) {
 
       {/* Main */}
       <main className="flex-1 overflow-hidden">
-        {selected ? (
+        {showDrift && drift?.configured ? (
+          <DriftSummary report={drift.report} specPath={drift.specPath} />
+        ) : selected ? (
           <EndpointDetail key={selected.id} endpoint={selected} />
         ) : (
           <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
