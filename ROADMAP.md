@@ -89,12 +89,27 @@ Direction: first-class, frictionless export and integrations *into* those tools,
 so adopting EasyDocs upstream is the obvious choice regardless of which docs
 portal or SDK generator a team already uses.
 
+## Where the dashboard fits
+
+The local dashboard is the **producer-side cockpit for the source-of-truth
+layer**, not a consumer-facing docs site. It runs on your machine, reads from
+your database, and is where you review, edit, and approve generated specs, see
+version history and field-level diffs, and inspect what was flagged as
+sensitive. It is the surface where the pillars become visible: redaction badges
+make pillar 1's "nothing leaves the machine" promise tangible, and docs-vs-reality
+drift (pillar 2) needs exactly this kind of surface to render. Keeping it local
+and producer-facing reinforces the wedge; letting it drift toward a hosted,
+consumer-facing portal would cross the anti-goal below.
+
 ## What we will deliberately NOT do
 
 Saying no here is what keeps the wedge sharp.
 
-- **No hosted docs portal.** Cede that to ReadMe / Mintlify / Scalar — integrate
-  with them (pillar 4) instead of competing.
+- **No hosted, consumer-facing docs portal.** No multi-tenant hosting, custom
+  domains, theming, or a published "try it out" aimed at your API's external
+  consumers. Cede that to ReadMe / Mintlify / Scalar — integrate with them
+  (pillar 4) instead of competing. This is **not** the local dashboard (see
+  below), which stays and is central to the wedge.
 - **No SDK / client generation.** That is Speakeasy / Fern territory. Be their
   input, not their rival.
 - **No build-blocking CI gatekeeping** for breaking changes. Crowded (Optic,
