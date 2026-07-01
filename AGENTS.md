@@ -1,5 +1,16 @@
 # EasyDocs
 
+## Product direction
+
+See `ROADMAP.md` for the wedge and pillars. One boundary matters when touching
+the dashboard: it is the **local, producer-side cockpit** for the generated
+spec (review/edit/approve, version history + diff, sensitive-field badges,
+docs-vs-reality drift). It is deliberately **not** a hosted, consumer-facing
+docs portal — no multi-tenant hosting, custom domains, theming, or a published
+"try it out" aimed at your API's external consumers (that is ceded to
+ReadMe/Mintlify/Scalar). Keep dashboard work serving the developer producing
+the spec, not the external API consumer.
+
 ## Release
 
 Run `pnpm release` (or `release:minor` / `release:major`). The script
