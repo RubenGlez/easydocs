@@ -25,7 +25,10 @@ is not set up for CI-triggered publish.
 
 `apps/evals` is `private` and never published; it holds the AI spec-accuracy
 eval harness (`pnpm --filter easydocs-evals eval`, and `pnpm matrix` for the
-per-provider/model accuracy scoreboard).
+per-provider/model accuracy scoreboard). Publish the scoreboard as a committable
+report with `pnpm matrix --markdown > SCOREBOARD.md` (run where provider keys are
+available; progress goes to stderr so stdout is clean Markdown). Accuracy is a
+roadmap pillar — the scoreboard is meant to be a published, defensible number.
 
 ## CI
 

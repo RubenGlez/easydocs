@@ -27,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ignores any hosted API keys present in the environment, and fails fast at startup
   if a hosted provider is explicitly configured — so no captured payload can ever
   reach a third-party service. `isHostedProvider` is exported from `@easydocs/core`.
+- Publishable accuracy scoreboard: `pnpm matrix --markdown` emits the per-provider/
+  model spec-accuracy scoreboard as a committable Markdown report (progress goes to
+  stderr so stdout is clean). Run it where provider keys are available:
+  `pnpm matrix --markdown > SCOREBOARD.md`.
 
 ## [0.7.0] - 2026-07-01
 
