@@ -5,6 +5,18 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Fail-able PR spec diffs: `easydocs diff` now classifies each change as breaking,
+  additive, or non-breaking, groups them by endpoint, and renders a richer report
+  (summary line, breaking-change callout, severity badges, collapsible sections for
+  large diffs). A new `--fail-on=none|breaking|any` flag turns the diff into an
+  optional CI gate (exit code 3 when the threshold is crossed; `none` stays
+  comment-only). The GitHub Action gained a matching `fail-on` input (default
+  `none`) — it always posts the sticky comment first, then fails the job only on a
+  breaking change, so existing workflows are unaffected.
+
 ## [0.7.0] - 2026-07-01
 
 ### Added
