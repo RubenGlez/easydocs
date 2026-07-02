@@ -72,10 +72,17 @@ npx easydocs export --yaml > openapi.yaml
 Commit your exported spec (`openapi.json`) and let EasyDocs comment the field-level
 changes on every PR. Diff two spec files directly:
 
+The diff is grouped by endpoint and each change is tagged breaking / additive /
+non-breaking, so a removed response field reads differently from a description tweak.
+
 ```bash
-npx easydocs diff old.json new.json            # human-readable summary
-npx easydocs diff old.json new.json --markdown  # PR-comment Markdown
+npx easydocs diff old.json new.json                    # human-readable summary
+npx easydocs diff old.json new.json --markdown         # PR-comment Markdown
+npx easydocs diff old.json new.json --fail-on=breaking # exit 3 on a breaking change
 ```
+
+`--fail-on` accepts `none` (default, never fails), `breaking` (fail on any breaking
+change), or `any` (fail on any change at all).
 
 Or drop in the GitHub Action — it diffs the committed spec against the base branch
 and posts a sticky comment (updated in place on each push):
@@ -94,9 +101,12 @@ jobs:
       - uses: RubenGlez/easydocs@v1
         with:
           spec: openapi.json
+          fail-on: breaking   # optional; default 'none' (comment-only)
 ```
 
-The check is informational only — it comments the diff, it never fails the build.
+By default the check is informational — it comments the diff and never fails the
+build. Set `fail-on: breaking` (or `any`) to turn it into a review gate that fails
+the PR when the spec changes cross that threshold; the comment is still posted.
 
 ---
 

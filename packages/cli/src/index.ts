@@ -1,5 +1,6 @@
 import { createDB, getAllEndpoints, getEndpointsByProject, findOrCreateProject, buildFullSpec } from '@easydocs/core'
-import { createCapturer, parseConfig, diffSpecs, renderDiff } from '@easydocs/core'
+import { createCapturer, parseConfig, diffSpecs, classifyDiff, shouldFail, renderClassifiedDiff } from '@easydocs/core'
+import type { FailOn } from '@easydocs/core'
 import type { HttpMethod } from '@easydocs/core'
 import { createServer } from 'http'
 import { createRequire } from 'module'
@@ -26,7 +27,7 @@ switch (command) {
     break
   default:
     console.error(
-      `Unknown command: ${command}\n\nUsage:\n  easydocs [proxy]           Start proxy server\n  easydocs dashboard         Start the docs dashboard\n  easydocs export            Export spec to stdout\n  easydocs diff <a> <b>      Diff two spec files (JSON or YAML)\n\nFlags:\n  --project=<slug>           Scope to a project (default: all)\n  --port=<n>                 Port for proxy (default: 3999) or dashboard (default: 4999)\n  --yaml                     Export as YAML instead of JSON\n  --markdown                 Diff: emit Markdown (for PR comments) instead of plain text\n  --prod                     Dashboard: run next start instead of next dev`
+      `Unknown command: ${command}\n\nUsage:\n  easydocs [proxy]           Start proxy server\n  easydocs dashboard         Start the docs dashboard\n  easydocs export            Export spec to stdout\n  easydocs diff <a> <b>      Diff two spec files (JSON or YAML)\n\nFlags:\n  --project=<slug>           Scope to a project (default: all)\n  --port=<n>                 Port for proxy (default: 3999) or dashboard (default: 4999)\n  --yaml                     Export as YAML instead of JSON\n  --markdown                 Diff: emit Markdown (for PR comments) instead of plain text\n  --fail-on=<policy>         Diff: exit 3 when changes cross a threshold (none|breaking|any, default none)\n  --prod                     Dashboard: run next start instead of next dev`
     )
     process.exit(1)
 }
@@ -142,7 +143,14 @@ function runDiff(args: string[]) {
   const positionals = args.filter((a) => !a.startsWith('--'))
   const [beforePath, afterPath] = positionals
   if (!beforePath || !afterPath) {
-    console.error('Usage: easydocs diff <before> <after> [--markdown]')
+    console.error('Usage: easydocs diff <before> <after> [--markdown] [--fail-on=none|breaking|any]')
+    process.exit(2)
+  }
+
+  const failOnValues: FailOn[] = ['none', 'breaking', 'any']
+  const failOn = (getFlag(args, 'fail-on') ?? 'none') as FailOn
+  if (!failOnValues.includes(failOn)) {
+    console.error(`[EasyDocs] Invalid --fail-on value: ${failOn} (expected none, breaking, or any)`)
     process.exit(2)
   }
 
@@ -150,8 +158,12 @@ function runDiff(args: string[]) {
   const after = loadSpecFile(afterPath)
   const markdown = args.includes('--markdown')
 
-  // Comment-only feature: a diff is informational, so we always exit 0.
-  process.stdout.write(renderDiff(diffSpecs(before, after), { markdown }) + '\n')
+  const classified = classifyDiff(diffSpecs(before, after), before, after)
+  process.stdout.write(renderClassifiedDiff(classified, { markdown }) + '\n')
+
+  // Exit-code contract: 0 ok, 2 usage/file error (handled above), 3 fail-on
+  // threshold exceeded. Default --fail-on=none keeps the check comment-only.
+  if (shouldFail(classified, failOn)) process.exit(3)
 }
 
 // ─── Proxy ────────────────────────────────────────────────────────────────────
