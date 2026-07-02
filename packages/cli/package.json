@@ -14,7 +14,8 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "test": "tsup && vitest run"
   },
   "dependencies": {
     "@easydocs/core": "workspace:*",
@@ -24,7 +25,8 @@
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20",
     "tsup": "^8.3.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.6"
   },
   "repository": {
     "type": "git",
