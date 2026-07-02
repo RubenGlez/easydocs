@@ -5,7 +5,7 @@
     "dist",
     "README.md"
   ],
-  "description": "AI processing, storage, and spec building for EasyDocs",
+  "description": "Core engine for EasyDocs — generates OpenAPI specs from real API traffic. Local-first, self-hostable, open source.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

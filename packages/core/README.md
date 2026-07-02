@@ -1,6 +1,6 @@
 # @easydocs/core
 
-Core engine for [EasyDocs](https://github.com/RubenGlez/easydocs) — AI spec generation, storage, and the capture queue.
+Core engine for [EasyDocs](https://github.com/RubenGlez/easydocs) — turns your API's real traffic into OpenAPI specs, with storage and the capture queue. Local-first and self-hostable; an AI model does the generation, with an offline mode (Ollama).
 
 You don't need to install this directly. Framework adapters (`@easydocs/express`, `@easydocs/fastify`, etc.) depend on it automatically.
 

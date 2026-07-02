@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="banner.png" alt="EasyDocs — Add one line. Get OpenAPI docs from real traffic." />
+  <img src="banner.png" alt="EasyDocs — The API spec you can trust. Generated on your machine, from real traffic." />
 </p>
 
 # EasyDocs

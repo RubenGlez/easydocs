@@ -5,7 +5,7 @@
     "dist",
     "README.md"
   ],
-  "description": "EasyDocs handler wrapper for Next.js App Router and Pages Router",
+  "description": "OpenAPI docs for Next.js (App + Pages Router), generated from real traffic. Local-first, self-hostable, open source.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

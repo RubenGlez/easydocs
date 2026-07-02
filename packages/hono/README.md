@@ -1,6 +1,6 @@
 # @easydocs/hono
 
-EasyDocs middleware for [Hono](https://hono.dev/). Works on Node.js, Cloudflare Workers, Bun, and Deno.
+EasyDocs middleware for [Hono](https://hono.dev/). Works on Node.js, Cloudflare Workers, Bun, and Deno. Generate accurate OpenAPI 3.0 specs from your API's real traffic — local-first and self-hostable, with an offline mode (Ollama) where nothing leaves your machine.
 
 ## Install
 

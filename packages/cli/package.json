@@ -5,7 +5,7 @@
     "dist",
     "README.md"
   ],
-  "description": "EasyDocs CLI — proxy mode and spec export",
+  "description": "EasyDocs CLI — capture via proxy, export OpenAPI specs, and diff specs in CI. Runs locally.",
   "type": "module",
   "bin": {
     "easydocs": "./dist/index.js"

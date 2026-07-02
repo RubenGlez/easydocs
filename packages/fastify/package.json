@@ -5,7 +5,7 @@
     "dist",
     "README.md"
   ],
-  "description": "EasyDocs plugin for Fastify",
+  "description": "OpenAPI docs for Fastify, generated from real traffic. Local-first, self-hostable, open source.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

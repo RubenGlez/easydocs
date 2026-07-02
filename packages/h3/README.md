@@ -1,6 +1,6 @@
 # @easydocs/h3
 
-EasyDocs plugin for [h3](https://h3.unjs.io/), [Nitro](https://nitro.unjs.io/), and [Nuxt](https://nuxt.com/).
+EasyDocs plugin for [h3](https://h3.unjs.io/), [Nitro](https://nitro.unjs.io/), and [Nuxt](https://nuxt.com/). Generate accurate OpenAPI 3.0 specs from your API's real traffic — local-first and self-hostable, with an offline mode (Ollama) where nothing leaves your machine.
 
 ## Install
 

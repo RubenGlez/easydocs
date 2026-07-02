@@ -1,6 +1,6 @@
 # @easydocs/nextjs
 
-EasyDocs handler wrapper for [Next.js](https://nextjs.org/) App Router and Pages Router.
+EasyDocs handler wrapper for [Next.js](https://nextjs.org/) App Router and Pages Router. Generate accurate OpenAPI 3.0 specs from your API's real traffic — local-first and self-hostable, with an offline mode (Ollama) where nothing leaves your machine.
 
 > Next.js middleware runs in the Edge runtime and cannot access response bodies.
 > EasyDocs wraps individual route handlers instead — no URL changes needed.

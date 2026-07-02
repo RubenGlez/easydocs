@@ -5,7 +5,7 @@
     "dist",
     "README.md"
   ],
-  "description": "EasyDocs plugin for h3, Nitro, and Nuxt",
+  "description": "OpenAPI docs for h3, Nitro & Nuxt, generated from real traffic. Local-first, self-hostable, open source.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
