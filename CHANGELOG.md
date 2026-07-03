@@ -5,7 +5,7 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.9.0] - 2026-07-03
 
 ### Added
 - Drift demo: `pnpm demo:drift` shows docs-vs-reality drift end to end in one
@@ -39,6 +39,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   grouped by endpoint — making the PII-safe promise provable, not just a claim.
   A new `easydocs audit` command lists the same inventory from the terminal (with
   `--project` and `--markdown`), so a pipeline can assert what is being protected.
+
+### Fixed
+- Endpoint identity is now a stable OpenAPI route template across every adapter.
+  h3, Elysia, and both Next.js wrappers previously stored concrete URLs
+  (`/users/123`), exploding into one endpoint row and one AI generation per unique
+  URL; they now collapse to `/users/{id}`. Express/NestJS mounted routers keep
+  their mount prefix, and exported specs use `{param}` templating (valid OpenAPI),
+  so `drift` compares like-with-like.
+- The capture gate now tracks a bounded set of seen request/response shapes per
+  endpoint (keyed by status class), so an endpoint that alternates 200/404 — or
+  gains a new request field — no longer regenerates on every request or silently
+  skips re-documentation.
+- The CLI proxy no longer crashes the process on an unreachable upstream: handler
+  rejections return `502`, capture errors can't reach the response path, and
+  hop-by-hop headers are stripped.
+- Generation is now bounded — a per-attempt timeout (`ai.timeoutMs`, default 30s),
+  a capped capture queue (drop-oldest), and a circuit breaker that stops after
+  repeated failures — so a hung or unreachable provider can't stall capture,
+  exhaust memory, or spam the logs forever.
+- "Keep mine" conflict resolution no longer renders the endpoint blank in the
+  dashboard (single `activeSpec` helper). Read paths (`export`/`drift`/`audit`,
+  dashboard) resolve a project without creating it — a typo reports "Unknown
+  project" instead of inserting a junk row. Deleting an endpoint also removes its
+  spec versions. Schema init is awaited before the first query.
+- Fastify skips requests with no matched route (404s, scanner probes); capture
+  skips HEAD/OPTIONS and binary/non-JSON bodies; oversized bodies honor
+  `capture.maxBodySize`. The diff classifier no longer reports parameter
+  reorderings as changes and parses routes containing dots correctly. Next.js
+  reuses one capturer per config. `ai.baseUrl` is honored for every provider, the
+  no-key warning is provider-specific, and tRPC object query inputs keep their
+  shape.
+
+### Security
+- PII embedded in a request path (e.g. a proxy capturing `/users/alice@example.com`
+  or `/verify/<jwt>`) is redacted before the event reaches a hosted provider.
+  Value-based detection now also catches credit-card numbers sent as JSON numbers.
+- The dashboard binds to `127.0.0.1` by default (`next dev`/`start` no longer
+  listen on all interfaces); set `EASYDOCS_DASHBOARD_HOST` to widen exposure
+  deliberately.
 
 ## [0.8.1] - 2026-07-02
 
