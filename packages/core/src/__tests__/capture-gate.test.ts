@@ -94,6 +94,17 @@ describe('capture shape gate', () => {
     await drain(url, 2)
     expect(calls.count).toBe(2)
   })
+
+  it('does not capture HEAD/OPTIONS or non-JSON responses (C9, C8)', async () => {
+    const url = tmpDbUrl()
+    const c = capturer(url)
+    c.capture(event({ method: 'OPTIONS' as never }))
+    c.capture(event({ method: 'HEAD' as never }))
+    c.capture(event({ responseBody: '<html>not json</html>' })) // non-JSON string
+    c.capture(event({ responseBody: { type: 'Buffer', data: [1, 2, 3] } })) // serialized Buffer
+    await new Promise((r) => setTimeout(r, 150))
+    expect(calls.count).toBe(0)
+  })
 })
 
 describe('activeSpec', () => {
