@@ -105,10 +105,17 @@ export interface Capturer {
   capture(event: CaptureEvent): void
 }
 
+// Stop attempting generation after this many consecutive failures — otherwise a
+// misconfigured/unreachable provider (e.g. Ollama fallback with no server running)
+// produces one error log per captured request, forever.
+const FAILURE_CIRCUIT_THRESHOLD = 5
+
 export function createCapturer(config: EasyDocsConfig): Capturer {
   const adapter = createAdapter(config.storage)
   const queue = new CaptureQueue()
   const offline = config.privacy?.offline === true
+  let consecutiveFailures = 0
+  let circuitOpen = false
 
   if (offline) {
     // Fail fast on a contradictory hosted provider, before any traffic is captured.
@@ -142,6 +149,10 @@ export function createCapturer(config: EasyDocsConfig): Capturer {
       const projectSlug = config.project ?? DEFAULT_PROJECT
 
       queue.add(async () => {
+        // Circuit is open: generation has been failing repeatedly, so don't keep
+        // hammering the provider (and the error log) on every request.
+        if (circuitOpen) return
+
         const key = shapeKey(event)
         const projectId = await adapter.findOrCreateProject(projectSlug)
         const existing = await adapter.getEndpointByPathMethod(projectId, event.path, event.method)
@@ -163,7 +174,21 @@ export function createCapturer(config: EasyDocsConfig): Capturer {
           if (isHostedProvider(resolveProvider(config.ai, offline))) eventForAI = result.redactedEvent
         }
 
-        const spec = await buildOperation(eventForAI, existing?.spec ?? null, config.ai, offline)
+        let spec
+        try {
+          spec = await buildOperation(eventForAI, existing?.spec ?? null, config.ai, offline)
+        } catch (err) {
+          if (++consecutiveFailures >= FAILURE_CIRCUIT_THRESHOLD) {
+            circuitOpen = true
+            console.warn(
+              `[EasyDocs] Disabling capture after ${FAILURE_CIRCUIT_THRESHOLD} consecutive ` +
+              'generation failures. Check your AI provider (is Ollama running / is the API key valid?).'
+            )
+          }
+          throw err
+        }
+        consecutiveFailures = 0
+
         markSensitiveProperties(spec, sensitivePaths)
         // Record this shape as seen (move-to-end, capped) so future identical
         // captures are skipped while genuinely new shapes still regenerate.
