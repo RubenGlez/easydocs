@@ -63,6 +63,27 @@ describe('express middleware', () => {
     )
   })
 
+  it('captures the normalized route template, not the concrete URL', async () => {
+    await request(makeApp()).get('/users/42')
+    expect(getCaptureMock()).toHaveBeenCalledWith(
+      expect.objectContaining({ path: '/users/{id}' })
+    )
+  })
+
+  it('preserves the router mount prefix (baseUrl)', async () => {
+    const app = express()
+    app.use(express.json())
+    app.use(easydocs())
+    const router = express.Router()
+    router.get('/users/:id', (req, res) => res.json({ id: req.params.id }))
+    app.use('/api/v1', router)
+
+    await request(app).get('/api/v1/users/42')
+    expect(getCaptureMock()).toHaveBeenCalledWith(
+      expect.objectContaining({ path: '/api/v1/users/{id}' })
+    )
+  })
+
   it('passes config to createCapturer', async () => {
     makeApp({ project: 'my-api' })
     expect(createCapturer).toHaveBeenCalledWith(

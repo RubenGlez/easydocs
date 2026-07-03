@@ -12,6 +12,7 @@ import type { Capturer } from '@easydocs/core'
 interface HttpRequest {
   method: string
   path: string
+  baseUrl?: string
   route?: { path?: string }
   query: Record<string, string>
   params: Record<string, string>
@@ -41,7 +42,9 @@ export class EasyDocsInterceptor implements NestInterceptor {
         this.capturer.capture(
           buildCaptureEvent({
             method: req.method,
-            path: req.route?.path ?? req.path,
+            // route.path is relative to the router's mount; prepend baseUrl so
+            // mounted sub-routers keep their prefix (matches the Express adapter).
+            path: req.route?.path ? (req.baseUrl ?? '') + req.route.path : req.path,
             query: req.query as Record<string, unknown>,
             params: req.params as Record<string, unknown>,
             requestBody: req.body,

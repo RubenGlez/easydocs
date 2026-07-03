@@ -134,6 +134,29 @@ describe('capture pipeline + privacy', () => {
     ).toThrow(/offline/i)
   })
 
+  it('redacts PII embedded in the URL path before a hosted provider sees it', async () => {
+    const url = tmpDbUrl()
+    const capturer = createCapturer({
+      storage: { type: 'sqlite', url },
+      ai: { provider: 'openai', apiKey: 'test-key' },
+    })
+
+    // Proxy-style capture: no path params, so the email stays in the concrete path.
+    capturer.capture(
+      buildCaptureEvent({
+        method: 'GET',
+        path: '/users/alice@example.com',
+        responseBody: { id: 'u_1' },
+        status: 200,
+      })
+    )
+    await waitForEndpoint(url)
+
+    expect(prompts).toHaveLength(1)
+    expect(prompts[0]).not.toContain('alice@example.com')
+    expect(prompts[0]).toContain('[REDACTED]')
+  })
+
   it('sends raw values when privacy is disabled', async () => {
     const url = tmpDbUrl()
     const capturer = createCapturer({

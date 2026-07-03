@@ -1,4 +1,5 @@
 import type { CaptureEvent, HttpMethod } from './types.js'
+import { normalizePath } from './path.js'
 
 export interface RawCaptureInput {
   method: string
@@ -25,7 +26,7 @@ function normalizeRecord(value: Record<string, unknown> | null | undefined): Rec
 export function buildCaptureEvent(raw: RawCaptureInput): CaptureEvent {
   return {
     method: raw.method.toUpperCase() as HttpMethod,
-    path: raw.path,
+    path: normalizePath(raw.path, raw.params),
     query: normalizeRecord(raw.query),
     params: normalizeRecord(raw.params),
     body: raw.requestBody ?? null,

@@ -13,7 +13,10 @@ export function easydocs(config?: EasyDocsConfig) {
       capturer.capture(
         buildCaptureEvent({
           method: req.method,
-          path: req.route?.path ?? req.path,
+          // req.route.path is relative to the router's mount point; prepend
+          // req.baseUrl so a router mounted at /api/v1 keeps its prefix and two
+          // routers sharing a relative path don't collide.
+          path: req.route?.path ? (req.baseUrl ?? '') + req.route.path : req.path,
           query: req.query as Record<string, unknown>,
           params: req.params,
           requestBody: req.body,
