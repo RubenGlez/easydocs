@@ -39,7 +39,13 @@ function redactValue(value: unknown, placeholder: string): string {
 
 function isFlagged(key: string, value: unknown, ctx: DetectContext): boolean {
   if (ctx.keyNames.has(normalizeKey(key))) return true
-  return typeof value === 'string' && matchesSensitiveValue(value, ctx.valuePatterns)
+  if (typeof value === 'string') return matchesSensitiveValue(value, ctx.valuePatterns)
+  // A credit-card number sent as a JSON number (not a string) must still be
+  // caught by the value rules (Luhn), so test its stringified form too.
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return matchesSensitiveValue(String(value), ctx.valuePatterns)
+  }
+  return false
 }
 
 function redactTree(value: unknown, ctx: DetectContext): unknown {

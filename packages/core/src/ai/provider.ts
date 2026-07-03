@@ -56,13 +56,22 @@ export function resolveModel(config?: AIConfig, offline?: boolean): LanguageMode
   const provider: Provider = resolveProvider(config, offline)
   const model = config?.model ?? DEFAULT_MODELS[provider]
 
+  // A configured baseUrl is honored for every hosted provider (e.g. pointing
+  // OpenAI/Anthropic at an internal gateway). Passing undefined lets each SDK use
+  // its own default endpoint.
   switch (provider) {
     case 'anthropic': {
-      const client = createAnthropic({ apiKey: config?.apiKey ?? process.env.ANTHROPIC_API_KEY })
+      const client = createAnthropic({
+        apiKey: config?.apiKey ?? process.env.ANTHROPIC_API_KEY,
+        baseURL: config?.baseUrl,
+      })
       return client(model)
     }
     case 'deepseek': {
-      const client = createDeepSeek({ apiKey: config?.apiKey ?? process.env.DEEPSEEK_API_KEY })
+      const client = createDeepSeek({
+        apiKey: config?.apiKey ?? process.env.DEEPSEEK_API_KEY,
+        baseURL: config?.baseUrl,
+      })
       return client(model)
     }
     case 'ollama': {
@@ -73,7 +82,10 @@ export function resolveModel(config?: AIConfig, offline?: boolean): LanguageMode
       return client(model)
     }
     default: {
-      const client = createOpenAI({ apiKey: config?.apiKey ?? process.env.OPENAI_API_KEY })
+      const client = createOpenAI({
+        apiKey: config?.apiKey ?? process.env.OPENAI_API_KEY,
+        baseURL: config?.baseUrl,
+      })
       return client(model)
     }
   }

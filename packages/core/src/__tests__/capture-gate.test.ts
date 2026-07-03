@@ -105,6 +105,19 @@ describe('capture shape gate', () => {
     await new Promise((r) => setTimeout(r, 150))
     expect(calls.count).toBe(0)
   })
+
+  it('skips bodies larger than capture.maxBodySize (I7)', async () => {
+    const url = tmpDbUrl()
+    const c = createCapturer({
+      storage: { type: 'sqlite', url },
+      ai: { provider: 'ollama' },
+      capture: { maxBodySize: 100 },
+    })
+    const big = { blob: 'x'.repeat(500) }
+    c.capture(event({ responseBody: big }))
+    await new Promise((r) => setTimeout(r, 150))
+    expect(calls.count).toBe(0)
+  })
 })
 
 describe('activeSpec', () => {

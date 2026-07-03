@@ -72,6 +72,15 @@ describe('trpc middleware', () => {
     )
   })
 
+  it('JSON-encodes nested object query values instead of [object Object] (A4)', async () => {
+    await makeCaller().getUser({ filter: { status: 'active' } } as never)
+    expect(getCaptureMock()).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: { filter: JSON.stringify({ status: 'active' }) },
+      })
+    )
+  })
+
   it('passes config to createCapturer', () => {
     makeCaller({ project: 'my-api' })
     expect(createCapturer).toHaveBeenCalledWith(expect.objectContaining({ project: 'my-api' }))
