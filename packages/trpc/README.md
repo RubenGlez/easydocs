@@ -1,6 +1,6 @@
 # @easydocs/trpc
 
-EasyDocs middleware for [tRPC](https://trpc.io/) (v11+).
+EasyDocs middleware for [tRPC](https://trpc.io/) (v11+). Generate accurate OpenAPI 3.0 specs from your API's real traffic — local-first and self-hostable, with an offline mode (Ollama) where nothing leaves your machine.
 
 ## Install
 

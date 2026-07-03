@@ -6,18 +6,15 @@
 // per-model scoreboard. Models without credentials (or an unreachable Ollama)
 // are reported as skipped, never silently dropped.
 //
-//   pnpm matrix             # all available models, full scoreboard
-//   pnpm matrix --quiet     # scoreboard only, no per-fixture lines
-//   pnpm matrix --markdown  # emit a committable Markdown scoreboard to stdout
-//   pnpm matrix --gate      # CI gate: fail (exit 1) if any tested provider's mean < threshold
-//
-// Publish the scoreboard (run where provider keys are available):
-//   pnpm matrix --markdown > SCOREBOARD.md
+//   pnpm matrix              # all available models, full scoreboard
+//   pnpm matrix --quiet      # scoreboard only, no per-fixture lines
+//   pnpm matrix --markdown   # emit a publishable Markdown table (progress goes to stderr)
+//   pnpm matrix --gate       # CI gate: fail (exit 1) if any tested provider's mean < threshold
 
 import { buildOperation } from '@easydocs/core'
 import { readFileSync, readdirSync } from 'fs'
 import { resolve, join } from 'path'
-import score, { meanByDimension } from './score.ts'
+import score from './score.ts'
 
 const DIR = import.meta.dirname
 try {
@@ -27,9 +24,12 @@ try {
   // no .env (e.g. CI) — env vars are expected to be set already
 }
 
-const MARKDOWN = process.argv.includes('--markdown')
-const QUIET = process.argv.includes('--quiet') || MARKDOWN
+const QUIET = process.argv.includes('--quiet')
 const GATE = process.argv.includes('--gate')
+const MARKDOWN = process.argv.includes('--markdown')
+
+// In Markdown mode, progress lines go to stderr so stdout is a clean table.
+const progress = (s: string) => (MARKDOWN ? process.stderr : process.stdout).write(s)
 
 type Candidate = {
   provider: 'openai' | 'anthropic' | 'deepseek' | 'ollama'
@@ -96,16 +96,28 @@ async function runModel(c: Candidate) {
       try {
         const spec = await buildOperation(fixture, null, { provider: c.provider, model: c.model })
         const r = score(JSON.stringify(spec), { vars: { fixture: rel } })
-        return { rel, score: r.score, reason: r.reason, named: r.namedScores }
+        return { rel, score: r.score, reason: r.reason, named: r.namedScores ?? {} }
       } catch (err) {
-        return { rel, score: 0, reason: `ERROR: ${String(err).slice(0, 120)}`, named: undefined }
+        return { rel, score: 0, reason: `ERROR: ${String(err).slice(0, 120)}`, named: {} }
       }
     })
   )
   const mean = results.reduce((s, r) => s + r.score, 0) / results.length
   const worst = results.reduce((a, b) => (b.score < a.score ? b : a))
-  const dims = meanByDimension(results.map((r) => r.named))
-  return { mean, worst, results, dims }
+  // Per-dimension averages, over only the fixtures where each dimension applied.
+  const acc: Record<string, { sum: number; n: number }> = {}
+  for (const r of results) {
+    for (const [k, v] of Object.entries(r.named)) {
+      if (!k.startsWith('acc:')) continue
+      const d = k.slice(4)
+      acc[d] ??= { sum: 0, n: 0 }
+      acc[d].sum += v
+      acc[d].n += 1
+    }
+  }
+  const dimAvg: Record<string, number> = {}
+  for (const [d, { sum, n }] of Object.entries(acc)) dimAvg[d] = sum / n
+  return { mean, worst, results, dimAvg }
 }
 
 const label = (c: Candidate) => `${c.provider}/${c.model}`
@@ -154,7 +166,7 @@ if (GATE) {
   process.exit(0)
 }
 
-const ran: { c: Candidate; mean: number; worst: any; dims: Record<string, number> }[] = []
+const ran: { c: Candidate; mean: number; worst: any; dimAvg: Record<string, number> }[] = []
 const skipped: string[] = []
 
 for (const c of MATRIX) {
@@ -162,10 +174,9 @@ for (const c of MATRIX) {
     skipped.push(`${label(c)} — ${c.ollama ? 'Ollama not reachable at localhost:11434' : `${c.keyEnv} not set`}`)
     continue
   }
-  // In markdown mode stdout is the report, so progress goes to stderr.
-  ;(MARKDOWN ? process.stderr : process.stdout).write(`running ${label(c)} (${fixtures.length} fixtures)...\n`)
-  const { mean, worst, results, dims } = await runModel(c)
-  ran.push({ c, mean, worst, dims })
+  progress(`running ${label(c)} (${fixtures.length} fixtures)...\n`)
+  const { mean, worst, results, dimAvg } = await runModel(c)
+  ran.push({ c, mean, worst, dimAvg })
   if (!QUIET) {
     for (const r of results.filter((r) => r.score < 1)) {
       console.log(`   ${r.rel.replace('fixtures/', '').padEnd(38)} ${r.score.toFixed(3)}  ${r.reason}`)
@@ -175,63 +186,34 @@ for (const c of MATRIX) {
 
 const sorted = ran.sort((a, b) => b.mean - a.mean)
 
-// The union of section names seen across all models, in a stable display order.
-const SECTION_ORDER = ['tags', 'responses', 'responseSchema', 'parameters', 'requestBody', 'security']
-const allDims = [
-  ...SECTION_ORDER.filter((d) => sorted.some((r) => d in r.dims)),
-  ...[...new Set(sorted.flatMap((r) => Object.keys(r.dims)))].filter((d) => !SECTION_ORDER.includes(d)).sort(),
-]
-const cell = (r: (typeof sorted)[number], d: string) => (d in r.dims ? r.dims[d].toFixed(2) : '—')
-
+// --- Markdown mode: emit a publishable table on stdout, then exit ------------
 if (MARKDOWN) {
-  const lines: string[] = [
-    '# EasyDocs spec-accuracy scoreboard',
-    '',
-    `Each model runs all ${fixtures.length} ground-truth fixtures through \`buildOperation()\` ` +
-      'and is scored by the same deterministic scorer the promptfoo suite uses. ' +
-      'Higher is better (1.0 = exact match on every scored field).',
-    '',
-    'Regenerate with `pnpm matrix --markdown > SCOREBOARD.md` where provider keys are available.',
-    '',
-    '| Model | Mean accuracy | Worst fixture |',
-    '| ----- | ------------- | ------------- |',
-  ]
+  const date = new Date().toISOString().slice(0, 10)
+  const DIMS = ['tags', 'responses', 'parameters', 'requestBody', 'security', 'responseSchema']
+  const head = ['Model', 'Mean', ...DIMS]
+  const cell = (n: number | undefined) => (n == null ? '—' : n.toFixed(2))
+  console.log(`<!-- generated by \`pnpm matrix --markdown --quiet\` on ${date}; ${fixtures.length} fixtures -->`)
+  console.log('')
+  console.log('| ' + head.join(' | ') + ' |')
+  console.log('| ' + head.map((_, i) => (i === 0 ? ':--' : '--:')).join(' | ') + ' |')
   for (const r of sorted) {
-    const w = `\`${r.worst.rel.replace('fixtures/', '')}\` (${r.worst.score.toFixed(2)})`
-    lines.push(`| \`${label(r.c)}\` | ${r.mean.toFixed(3)} | ${w} |`)
-  }
-  if (sorted.length === 0) {
-    lines.push('| _no models available_ | — | — |')
-  }
-  if (allDims.length > 0) {
-    lines.push('', '## Accuracy by section', '', 'Where each model is strong or weak. A section only counts on the fixtures where it applies.', '')
-    lines.push(`| Model | ${allDims.join(' | ')} |`)
-    lines.push(`| ----- | ${allDims.map(() => '---').join(' | ')} |`)
-    for (const r of sorted) {
-      lines.push(`| \`${label(r.c)}\` | ${allDims.map((d) => cell(r, d)).join(' | ')} |`)
-    }
+    const cells = [`\`${label(r.c)}\``, r.mean.toFixed(3), ...DIMS.map((d) => cell(r.dimAvg[d]))]
+    console.log('| ' + cells.join(' | ') + ' |')
   }
   if (skipped.length) {
-    lines.push('', '**Skipped (no credentials):**', '')
-    for (const s of skipped) lines.push(`- ${s}`)
+    console.log('')
+    console.log(`_Skipped (no credentials on this run): ${skipped.map((s) => `\`${s.split(' — ')[0]}\``).join(', ')}._`)
   }
-  process.stdout.write(lines.join('\n') + '\n')
-} else {
-  console.log('\n=== SCOREBOARD ===')
-  console.log('model'.padEnd(40), 'mean', '  worst fixture')
-  for (const r of sorted) {
-    const w = `${r.worst.rel.replace('fixtures/', '')} (${r.worst.score.toFixed(2)})`
-    console.log(label(r.c).padEnd(40), r.mean.toFixed(3), ' ', w)
-  }
-  if (allDims.length > 0) {
-    console.log('\n=== ACCURACY BY SECTION ===')
-    console.log('model'.padEnd(40), allDims.map((d) => d.slice(0, 8).padStart(8)).join(' '))
-    for (const r of sorted) {
-      console.log(label(r.c).padEnd(40), allDims.map((d) => cell(r, d).padStart(8)).join(' '))
-    }
-  }
-  if (skipped.length) {
-    console.log('\n=== SKIPPED (no credentials) ===')
-    for (const s of skipped) console.log(' -', s)
-  }
+  process.exit(0)
+}
+
+console.log('\n=== SCOREBOARD ===')
+console.log('model'.padEnd(40), 'mean', '  worst fixture')
+for (const r of sorted) {
+  const w = `${r.worst.rel.replace('fixtures/', '')} (${r.worst.score.toFixed(2)})`
+  console.log(label(r.c).padEnd(40), r.mean.toFixed(3), ' ', w)
+}
+if (skipped.length) {
+  console.log('\n=== SKIPPED (no credentials) ===')
+  for (const s of skipped) console.log(' -', s)
 }

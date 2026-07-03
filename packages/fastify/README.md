@@ -1,6 +1,6 @@
 # @easydocs/fastify
 
-EasyDocs plugin for [Fastify](https://fastify.dev/).
+EasyDocs plugin for [Fastify](https://fastify.dev/). Generate accurate OpenAPI 3.0 specs from your API's real traffic — local-first and self-hostable, with an offline mode (Ollama) where nothing leaves your machine.
 
 ## Install
 

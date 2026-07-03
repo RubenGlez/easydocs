@@ -27,13 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ignores any hosted API keys present in the environment, and fails fast at startup
   if a hosted provider is explicitly configured — so no captured payload can ever
   reach a third-party service. `isHostedProvider` is exported from `@easydocs/core`.
-- Publishable accuracy scoreboard: `pnpm matrix --markdown` emits the per-provider/
-  model spec-accuracy scoreboard as a committable Markdown report (progress goes to
-  stderr so stdout is clean). Run it where provider keys are available:
-  `pnpm matrix --markdown > SCOREBOARD.md`. The scoreboard now also breaks accuracy
-  down **by spec section** (tags, responses, response schema, parameters, request
-  body, security) so it's clear where a model is strong or weak, not just its overall
-  mean. `meanByDimension` is exported from the eval scorer.
 - Redaction audit: EasyDocs can now show exactly which fields it protects. A new
   `collectSensitiveFields` helper (exported from `@easydocs/core` and the pure
   `@easydocs/core/privacy/audit` subpath) reads the `x-easydocs-sensitive` markers
@@ -41,6 +34,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   grouped by endpoint — making the PII-safe promise provable, not just a claim.
   A new `easydocs audit` command lists the same inventory from the terminal (with
   `--project` and `--markdown`), so a pipeline can assert what is being protected.
+
+## [0.8.1] - 2026-07-02
+
+### Changed
+- Documentation and positioning refresh: package descriptions and framework
+  adapter READMEs now lead with trust and sovereignty (local-first, self-hostable,
+  offline-capable) rather than the AI. No functional changes.
+
+## [0.8.0] - 2026-07-02
+
+### Added
+- Fail-able PR spec diffs: `easydocs diff` now classifies each change as breaking,
+  additive, or non-breaking, groups them by endpoint, and renders a richer report
+  (summary line, breaking-change callout, severity badges, collapsible sections for
+  large diffs). A new `--fail-on=none|breaking|any` flag turns the diff into an
+  optional CI gate (exit code 3 when the threshold is crossed; `none` stays
+  comment-only). The GitHub Action gained a matching `fail-on` input (default
+  `none`) — it always posts the sticky comment first, then fails the job only on a
+  breaking change, so existing workflows are unaffected.
 
 ## [0.7.0] - 2026-07-01
 

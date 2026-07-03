@@ -1,11 +1,11 @@
 {
   "name": "@easydocs/hono",
-  "version": "0.7.0",
+  "version": "0.8.1",
   "files": [
     "dist",
     "README.md"
   ],
-  "description": "EasyDocs middleware for Hono",
+  "description": "OpenAPI docs for Hono, generated from real traffic. Local-first, self-hostable, open source.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

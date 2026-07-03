@@ -1,6 +1,6 @@
 # @easydocs/elysia
 
-EasyDocs plugin for [Elysia](https://elysiajs.com/) (Bun-native).
+EasyDocs plugin for [Elysia](https://elysiajs.com/) (Bun-native). Generate accurate OpenAPI 3.0 specs from your API's real traffic — local-first and self-hostable, with an offline mode (Ollama) where nothing leaves your machine.
 
 ## Install
 

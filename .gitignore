@@ -39,4 +39,8 @@ yarn-error.log*
 # test coverage
 coverage/
 .playwright-mcp/
-.harness/
+
+# doctier:begin — managed by 'doctier init', do not edit
+**/_prototype-*
+**/_spike/**
+# doctier:end

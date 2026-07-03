@@ -1,11 +1,11 @@
 {
   "name": "@easydocs/trpc",
-  "version": "0.7.0",
+  "version": "0.8.1",
   "files": [
     "dist",
     "README.md"
   ],
-  "description": "EasyDocs middleware for tRPC",
+  "description": "OpenAPI docs for tRPC, generated from real traffic. Local-first, self-hostable, open source.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

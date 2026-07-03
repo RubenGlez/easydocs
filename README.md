@@ -1,21 +1,21 @@
 <p align="center">
-  <img src="banner.png" alt="EasyDocs — Add one line. Get OpenAPI docs from real traffic." />
+  <img src="banner.png" alt="EasyDocs — The API spec you can trust. Generated on your machine, from real traffic." />
 </p>
 
 # EasyDocs
 
-**Add one line. Get OpenAPI docs from real traffic.**
+**The API spec you can actually trust — generated on your machine, from real traffic.**
 
-EasyDocs watches your API traffic and uses AI to generate accurate, up-to-date OpenAPI 3.0 specs — automatically. No spec files to write, no annotations to maintain. Your docs describe what the API actually does, not what you thought it did when you last touched the YAML.
+EasyDocs generates accurate, up-to-date OpenAPI 3.0 specs from your API's real traffic, running entirely on your machine with nothing sent to anyone. Add one line; no spec files to write, no annotations to maintain. Your docs describe what the API actually does, not what you thought it did when you last touched the YAML. (Under the hood an AI model turns observed requests and responses into the spec — richer than mechanical type-merging — and you stay in control of what ships.)
 
 ## Why EasyDocs
 
 - **Local-first** — your traffic never leaves your machine. No cloud, fully self-hostable.
+- **Works fully offline** — point it at a local Ollama model; no API key required, and no model vendor ever sees your data.
 - **PII-safe by default** — secrets and personal data (passwords, tokens, emails, card numbers) are detected and redacted before the payload reaches a hosted AI provider, and flagged in the docs.
 - **Open-source & free** — no SaaS lock-in, no paywalled features.
-- **Works fully offline** — point it at a local Ollama model; no API key required, and no model vendor ever sees your data.
-- **AI-generated, not just type-merged** — richer specs with real descriptions and detected auth schemes, not mechanical schema inference.
 - **Framework-native accuracy** — adapters capture true route templates (`/users/:id`), not the concrete URLs (`/users/123`) a proxy sees.
+- **Accurate, not mechanical** — an AI model reads real requests and responses to produce richer specs (real descriptions, detected auth schemes), not the bare schema a type-merger infers. Accuracy is measured against hand-written ground truth — see the [benchmark](./BENCHMARK.md).
 
 ## Two ways to get started
 
@@ -72,10 +72,17 @@ npx easydocs export --yaml > openapi.yaml
 Commit your exported spec (`openapi.json`) and let EasyDocs comment the field-level
 changes on every PR. Diff two spec files directly:
 
+The diff is grouped by endpoint and each change is tagged breaking / additive /
+non-breaking, so a removed response field reads differently from a description tweak.
+
 ```bash
-npx easydocs diff old.json new.json            # human-readable summary
-npx easydocs diff old.json new.json --markdown  # PR-comment Markdown
+npx easydocs diff old.json new.json                    # human-readable summary
+npx easydocs diff old.json new.json --markdown         # PR-comment Markdown
+npx easydocs diff old.json new.json --fail-on=breaking # exit 3 on a breaking change
 ```
+
+`--fail-on` accepts `none` (default, never fails), `breaking` (fail on any breaking
+change), or `any` (fail on any change at all).
 
 Or drop in the GitHub Action — it diffs the committed spec against the base branch
 and posts a sticky comment (updated in place on each push):
@@ -94,9 +101,12 @@ jobs:
       - uses: RubenGlez/easydocs@v1
         with:
           spec: openapi.json
+          fail-on: breaking   # optional; default 'none' (comment-only)
 ```
 
-The check is informational only — it comments the diff, it never fails the build.
+By default the check is informational — it comments the diff and never fails the
+build. Set `fail-on: breaking` (or `any`) to turn it into a review gate that fails
+the PR when the spec changes cross that threshold; the comment is still posted.
 
 ---
 
