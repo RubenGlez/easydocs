@@ -2,6 +2,7 @@ import type { Endpoint } from '../storage/schema.js'
 import { SECURITY_SCHEME_DEFS, isAuthSchemeName } from './auth.js'
 import type { AuthSchemeName } from './auth.js'
 import { toOpenApiPath } from '../path.js'
+import { activeSpec } from './schema.js'
 
 export function buildFullSpec(endpointList: Endpoint[], projectName?: string) {
   const usedSchemes = new Set<AuthSchemeName>()
@@ -9,17 +10,17 @@ export function buildFullSpec(endpointList: Endpoint[], projectName?: string) {
 
   for (const e of endpointList) {
     if (!e.path || !e.method) continue
-    const activeSpec = e.isManuallyEdited && e.manualSpec ? e.manualSpec : e.spec
-    if (!activeSpec) continue
+    const spec = activeSpec(e)
+    if (!spec) continue
 
     // Emit OpenAPI-style "{id}" templates even for endpoints stored the old
     // ":id" way, so the exported doc is always valid OpenAPI path templating.
     const specPath = toOpenApiPath(e.path)
     if (!paths[specPath]) paths[specPath] = {}
-    paths[specPath][e.method.toLowerCase()] = activeSpec
+    paths[specPath][e.method.toLowerCase()] = spec
 
-    if (activeSpec.security) {
-      for (const entry of activeSpec.security) {
+    if (spec.security) {
+      for (const entry of spec.security) {
         for (const name of Object.keys(entry)) {
           if (isAuthSchemeName(name)) usedSchemes.add(name)
         }

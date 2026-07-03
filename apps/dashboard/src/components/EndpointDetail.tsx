@@ -6,6 +6,7 @@ import { SpecEditor } from './SpecEditor'
 import { SpecVersionHistory } from './SpecVersionHistory'
 import { ConflictBanner } from './ConflictBanner'
 import type { Endpoint } from '@easydocs/core/schema'
+import { activeSpec as resolveActiveSpec } from '@easydocs/core/spec/schema'
 
 export function EndpointDetail({ endpoint: initial }: { endpoint: Endpoint }) {
   const [endpoint, setEndpoint] = useState(initial)
@@ -16,7 +17,7 @@ export function EndpointDetail({ endpoint: initial }: { endpoint: Endpoint }) {
     setExampleOpen((prev) => ({ ...prev, [key]: !prev[key] }))
   }, [])
 
-  const activeSpec = endpoint.isManuallyEdited ? endpoint.manualSpec : endpoint.spec
+  const activeSpec = resolveActiveSpec(endpoint)
 
   if (!activeSpec) {
     return (

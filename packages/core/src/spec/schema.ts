@@ -44,3 +44,18 @@ export const OperationSchema = z.object({
 })
 
 export type Operation = z.infer<typeof OperationSchema>
+
+/**
+ * The spec an endpoint should display and export. A manual edit wins only when
+ * `manualSpec` actually holds a value: "Keep mine" conflict resolution promotes
+ * the manual edit into `spec` and clears `manualSpec` while leaving
+ * `isManuallyEdited` true, so `isManuallyEdited ? manualSpec : spec` would read
+ * `null`. This helper is the single source of truth used by core and the dashboard.
+ */
+export function activeSpec(endpoint: {
+  spec?: Operation | null
+  manualSpec?: Operation | null
+  isManuallyEdited?: boolean | null
+}): Operation | null {
+  return (endpoint.isManuallyEdited && endpoint.manualSpec ? endpoint.manualSpec : endpoint.spec) ?? null
+}

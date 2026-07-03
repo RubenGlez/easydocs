@@ -227,12 +227,37 @@ async function runAudit(args: string[]) {
 
 // ─── Proxy ────────────────────────────────────────────────────────────────────
 
+// Hop-by-hop headers are connection-scoped and must not be forwarded verbatim.
+// content-length/content-encoding are dropped too: we re-send a possibly
+// re-encoded body, so the original lengths/encodings no longer apply.
+const HOP_BY_HOP = new Set([
+  'connection',
+  'keep-alive',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'te',
+  'trailer',
+  'transfer-encoding',
+  'upgrade',
+  'host',
+  'content-length',
+  'content-encoding',
+])
+
+function stripHopByHop(headers: Record<string, unknown>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(headers)
+      .filter(([k]) => !HOP_BY_HOP.has(k.toLowerCase()))
+      .map(([k, v]) => [k, String(v)])
+  )
+}
+
 async function runProxy(args: string[]) {
   const port = parseInt(getFlag(args, 'port') ?? '3999', 10)
   const projectSlug = getFlag(args, 'project') ?? 'default'
   const capturer = createCapturer(parseConfig({ project: projectSlug }))
 
-  const server = createServer(async (req, res) => {
+  async function handle(req: import('http').IncomingMessage, res: import('http').ServerResponse) {
     const reqUrl = new URL(req.url ?? '/', `http://localhost:${port}`)
     const targetParam = reqUrl.searchParams.get('target')
 
@@ -266,11 +291,7 @@ async function runProxy(args: string[]) {
 
     const upstream = await fetch(targetUrl.toString(), {
       method,
-      headers: Object.fromEntries(
-        Object.entries(req.headers)
-          .filter(([k]) => k !== 'host')
-          .map(([k, v]) => [k, String(v)])
-      ),
+      headers: stripHopByHop(req.headers as Record<string, unknown>),
       body: requestBody,
     })
 
@@ -283,21 +304,41 @@ async function runProxy(args: string[]) {
       try { parsedRequestBody = JSON.parse(requestBody.toString()) } catch { parsedRequestBody = requestBody.toString() }
     }
 
-    capturer.capture({
-      method: method as HttpMethod,
-      path: targetUrl.pathname,
-      query: Object.fromEntries(targetUrl.searchParams.entries()),
-      params: {},
-      body: parsedRequestBody,
-      response: responseBody,
-      status: upstream.status,
-      requestHeaders: req.headers as Record<string, string>,
-      responseHeaders: Object.fromEntries(upstream.headers.entries()),
-      durationMs: Date.now() - startedAt,
-    })
+    // Capturing must never break the proxy: a throw here would otherwise reject
+    // the handler and (pre-fix) take the process down.
+    try {
+      capturer.capture({
+        method: method as HttpMethod,
+        path: targetUrl.pathname,
+        query: Object.fromEntries(targetUrl.searchParams.entries()),
+        params: {},
+        body: parsedRequestBody,
+        response: responseBody,
+        status: upstream.status,
+        requestHeaders: req.headers as Record<string, string>,
+        responseHeaders: Object.fromEntries(upstream.headers.entries()),
+        durationMs: Date.now() - startedAt,
+      })
+    } catch (err) {
+      console.error('[EasyDocs] Capture failed:', err instanceof Error ? err.message : err)
+    }
 
-    res.writeHead(upstream.status, Object.fromEntries(upstream.headers.entries()))
+    res.writeHead(upstream.status, stripHopByHop(Object.fromEntries(upstream.headers.entries())))
     res.end(responseText)
+  }
+
+  const server = createServer((req, res) => {
+    // Handle rejections here so an unreachable upstream (or any handler error)
+    // returns 502 instead of crashing the process with an unhandled rejection.
+    handle(req, res).catch((err) => {
+      console.error('[EasyDocs] Proxy error:', err instanceof Error ? err.message : err)
+      if (!res.headersSent) {
+        res.writeHead(502, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'Upstream request failed' }))
+      } else {
+        res.end()
+      }
+    })
   })
 
   server.listen(port, () => {
