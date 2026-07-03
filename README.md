@@ -52,7 +52,7 @@ app.use(easydocs({ project: "my-api" }));
 
 ```bash
 npm install -D @easydocs/dashboard
-npx easydocs dashboard
+npx @easydocs/cli dashboard
 # → http://localhost:4999
 ```
 
@@ -61,8 +61,8 @@ The dashboard also tracks version history: each endpoint records how its spec ev
 Or export to a file:
 
 ```bash
-npx easydocs export > openapi.json
-npx easydocs export --yaml > openapi.yaml
+npx @easydocs/cli export > openapi.json
+npx @easydocs/cli export --yaml > openapi.yaml
 ```
 
 ---
@@ -76,9 +76,9 @@ The diff is grouped by endpoint and each change is tagged breaking / additive /
 non-breaking, so a removed response field reads differently from a description tweak.
 
 ```bash
-npx easydocs diff old.json new.json                    # human-readable summary
-npx easydocs diff old.json new.json --markdown         # PR-comment Markdown
-npx easydocs diff old.json new.json --fail-on=breaking # exit 3 on a breaking change
+npx @easydocs/cli diff old.json new.json                    # human-readable summary
+npx @easydocs/cli diff old.json new.json --markdown         # PR-comment Markdown
+npx @easydocs/cli diff old.json new.json --fail-on=breaking # exit 3 on a breaking change
 ```
 
 `--fail-on` accepts `none` (default, never fails), `breaking` (fail on any breaking
@@ -117,9 +117,9 @@ what your API actually does** — the spec EasyDocs derives from real traffic. I
 answers "is my spec still true?", not "did my spec change?".
 
 ```bash
-npx easydocs drift openapi.json              # against locally captured traffic
-npx easydocs drift openapi.json --markdown   # PR-comment Markdown
-npx easydocs drift committed.json live.json  # or compare two files directly
+npx @easydocs/cli drift openapi.json              # against locally captured traffic
+npx @easydocs/cli drift openapi.json --markdown   # PR-comment Markdown
+npx @easydocs/cli drift committed.json live.json  # or compare two files directly
 ```
 
 It surfaces three kinds of divergence: endpoints and fields **observed in traffic
@@ -253,7 +253,7 @@ app.use(easydocs({ project: "orders-service" }));
 Switch between projects in the dashboard or scope the export:
 
 ```bash
-npx easydocs export --project=users-service > users.json
+npx @easydocs/cli export --project=users-service > users.json
 ```
 
 ---
