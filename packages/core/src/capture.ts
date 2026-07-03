@@ -9,6 +9,26 @@ import type { CaptureEvent, EasyDocsConfig } from './types.js'
 
 const DEFAULT_PROJECT = 'default'
 
+// Only document methods that carry a documentable request/response. HEAD and
+// OPTIONS (CORS preflight) reach some adapters' hooks but should never become an
+// endpoint row or an LLM call. TRACE/CONNECT likewise.
+const CAPTURED_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+
+// A response body we can't meaningfully document as a JSON schema: binary
+// payloads (Buffers/streams serialize as {type:'Buffer',data:[…]} garbage) and
+// non-JSON strings (text/plain, HTML) that adapters couldn't parse. Skip these
+// captures rather than feed noise to the model. `null` (no body) is fine.
+function isNonJsonBody(value: unknown): boolean {
+  if (value == null) return false
+  if (typeof value === 'string') return true
+  if (value instanceof Uint8Array || value instanceof ArrayBuffer) return true
+  if (typeof value === 'object') {
+    const o = value as Record<string, unknown>
+    if (o.type === 'Buffer' && Array.isArray(o.data)) return true
+  }
+  return false
+}
+
 // How many distinct request/response shapes to remember per endpoint before
 // evicting the oldest. Bounds the tracking string; large enough to cover an
 // endpoint's realistic set of status-class × shape combinations.
@@ -84,6 +104,9 @@ export function createCapturer(config: EasyDocsConfig): Capturer {
 
   return {
     capture(event: CaptureEvent) {
+      if (!CAPTURED_METHODS.has(event.method)) return
+      if (isNonJsonBody(event.response)) return
+
       const { ignoreRoutes, includePaths } = config.capture ?? {}
       if (ignoreRoutes?.some((r) => event.path.startsWith(r))) return
       if (includePaths && !includePaths.some((p) => event.path.startsWith(p))) return

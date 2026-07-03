@@ -65,18 +65,30 @@ function ensureDir(url: string) {
   }
 }
 
+// Schema init is async; a capture enqueued immediately after createDB could
+// otherwise query before the DDL lands ("no such table"). Memoize the init
+// promise per db so adapter methods can await it before their first query.
+const initPromises = new WeakMap<object, Promise<void>>()
+
 export function createDB(url?: string) {
   const dbUrl = url ?? process.env.EASYDOCS_DB_URL ?? defaultDbUrl()
   ensureDir(dbUrl)
   const client = createClient({ url: dbUrl })
   const db = drizzle(client, { schema: { projects, endpoints, specVersions } })
 
-  client
+  const ready = client
     .executeMultiple(INIT_SQL)
     .then(() => client.execute(MIGRATE_SQL).catch(() => { /* column already exists */ }))
+    .then(() => {})
     .catch((err: unknown) => console.error('[EasyDocs] DB init error:', err))
 
+  initPromises.set(db as object, ready)
   return db
+}
+
+/** Resolves once a db's schema initialization has completed. */
+export function dbReady(db: DB): Promise<void> {
+  return initPromises.get(db as object) ?? Promise.resolve()
 }
 
 // ─── Projects ────────────────────────────────────────────────────────────────
@@ -87,6 +99,12 @@ export async function findOrCreateProject(db: DB, slug: string): Promise<string>
   const id = crypto.randomUUID()
   await db.insert(projects).values({ id, name: slug, slug })
   return id
+}
+
+/** Resolve a project slug to its id WITHOUT creating it. For read paths. */
+export async function findProject(db: DB, slug: string): Promise<string | null> {
+  const existing = await db.select().from(projects).where(eq(projects.slug, slug)).get()
+  return existing?.id ?? null
 }
 
 export async function getAllProjects(db: DB) {
@@ -235,19 +253,24 @@ export async function createTestDB() {
 // ─── Adapter ─────────────────────────────────────────────────────────────────
 
 function wrapDB(db: DB): DatabaseAdapter {
+  // Every adapter call waits for schema init first; the promise resolves once
+  // and is cached, so this is a no-op after the first query.
+  const ready = dbReady(db)
+  const after = <T>(fn: () => Promise<T>): Promise<T> => ready.then(fn)
   return {
-    findOrCreateProject: (slug) => findOrCreateProject(db, slug),
+    findOrCreateProject: (slug) => after(() => findOrCreateProject(db, slug)),
+    findProject: (slug) => after(() => findProject(db, slug)),
     getEndpointByPathMethod: (projectId, path, method) =>
-      getEndpointByPathMethod(db, projectId, path, method),
+      after(() => getEndpointByPathMethod(db, projectId, path, method)),
     upsertEndpoint: (projectId, path, method, spec, responseHash) =>
-      upsertEndpoint(db, projectId, path, method, spec, responseHash),
-    getAllProjects: () => getAllProjects(db),
-    getAllEndpoints: () => getAllEndpoints(db),
-    getEndpointsByProject: (projectId) => getEndpointsByProject(db, projectId),
-    getEndpointVersions: (endpointId) => getEndpointVersions(db, endpointId),
-    deleteEndpointById: (id) => deleteEndpointById(db, id),
-    saveManualSpec: (id, manualSpec) => saveManualSpec(db, id, manualSpec),
-    resolveConflict: (id, keep) => resolveConflict(db, id, keep),
+      after(() => upsertEndpoint(db, projectId, path, method, spec, responseHash)),
+    getAllProjects: () => after(() => getAllProjects(db)),
+    getAllEndpoints: () => after(() => getAllEndpoints(db)),
+    getEndpointsByProject: (projectId) => after(() => getEndpointsByProject(db, projectId)),
+    getEndpointVersions: (endpointId) => after(() => getEndpointVersions(db, endpointId)),
+    deleteEndpointById: (id) => after(() => deleteEndpointById(db, id)),
+    saveManualSpec: (id, manualSpec) => after(() => saveManualSpec(db, id, manualSpec)),
+    resolveConflict: (id, keep) => after(() => resolveConflict(db, id, keep)),
   }
 }
 

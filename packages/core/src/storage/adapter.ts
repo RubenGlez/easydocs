@@ -6,6 +6,7 @@ import { createPostgresAdapter } from './postgres.js'
 
 export interface DatabaseAdapter {
   findOrCreateProject(slug: string): Promise<string>
+  findProject(slug: string): Promise<string | null>
   getEndpointByPathMethod(projectId: string, path: string, method: HttpMethod): Promise<Endpoint | undefined>
   upsertEndpoint(projectId: string, path: string, method: HttpMethod, spec: Operation, responseHash: string): Promise<string>
   getAllProjects(): Promise<Project[]>

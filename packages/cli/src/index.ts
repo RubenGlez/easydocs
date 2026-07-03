@@ -1,4 +1,4 @@
-import { createDB, getAllEndpoints, getEndpointsByProject, findOrCreateProject, buildFullSpec } from '@easydocs/core'
+import { createDB, getAllEndpoints, getEndpointsByProject, findProject, buildFullSpec, activeSpec } from '@easydocs/core'
 import { createCapturer, parseConfig, diffSpecs, classifyDiff, shouldFail, renderClassifiedDiff } from '@easydocs/core'
 import { computeDrift, renderDrift, collectSensitiveFields, renderAudit } from '@easydocs/core'
 import type { FailOn, HttpMethod, EndpointAudit } from '@easydocs/core'
@@ -41,6 +41,20 @@ switch (command) {
 function getFlag(args: string[], name: string): string | undefined {
   const entry = args.find((a) => a.startsWith(`--${name}=`))
   return entry?.split('=').slice(1).join('=')
+}
+
+// Read commands resolve a project slug without creating it — a typo should
+// report an unknown project (exit 2), not silently insert a junk project row.
+async function resolveReadProject(
+  db: ReturnType<typeof createDB>,
+  slug: string
+): Promise<string> {
+  const id = await findProject(db, slug)
+  if (!id) {
+    console.error(`[EasyDocs] Unknown project: ${slug}`)
+    process.exit(2)
+  }
+  return id
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
@@ -120,7 +134,7 @@ async function runExport(args: string[]) {
 
   let endpoints
   if (projectSlug) {
-    const projectId = await findOrCreateProject(db, projectSlug)
+    const projectId = await resolveReadProject(db, projectSlug)
     endpoints = await getEndpointsByProject(db, projectId)
   } else {
     endpoints = await getAllEndpoints(db)
@@ -199,7 +213,7 @@ async function runDrift(args: string[]) {
     const projectSlug = getFlag(args, 'project')
     const db = createDB(process.env.EASYDOCS_DB_URL)
     const endpoints = projectSlug
-      ? await getEndpointsByProject(db, await findOrCreateProject(db, projectSlug))
+      ? await getEndpointsByProject(db, await resolveReadProject(db, projectSlug))
       : await getAllEndpoints(db)
     observed = buildFullSpec(endpoints, projectSlug ?? undefined)
   }
@@ -217,12 +231,12 @@ async function runAudit(args: string[]) {
   const projectSlug = getFlag(args, 'project')
   const db = createDB(process.env.EASYDOCS_DB_URL)
   const endpoints = projectSlug
-    ? await getEndpointsByProject(db, await findOrCreateProject(db, projectSlug))
+    ? await getEndpointsByProject(db, await resolveReadProject(db, projectSlug))
     : await getAllEndpoints(db)
 
   const items: EndpointAudit[] = endpoints
     .map((e) => {
-      const spec = e.isManuallyEdited && e.manualSpec ? e.manualSpec : e.spec
+      const spec = activeSpec(e)
       return { path: e.path, method: e.method, fields: spec ? collectSensitiveFields(spec) : [] }
     })
     .sort((a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method))

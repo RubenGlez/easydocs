@@ -6,7 +6,7 @@ import {
   getAllEndpoints,
   getEndpointsByProject,
   getAllProjects,
-  findOrCreateProject,
+  findProject,
   buildFullSpec,
   computeDrift,
 } from '@easydocs/core'
@@ -28,7 +28,10 @@ export async function fetchAllProjects(): Promise<Project[]> {
 export async function fetchEndpoints(projectSlug?: string): Promise<Endpoint[]> {
   const db = getDb()
   if (!projectSlug) return getAllEndpoints(db)
-  const projectId = await findOrCreateProject(db, projectSlug)
+  // Read path: resolve without creating, so visiting /?project=typo doesn't
+  // insert a junk project row that then pollutes the project dropdown.
+  const projectId = await findProject(db, projectSlug)
+  if (!projectId) return []
   return getEndpointsByProject(db, projectId)
 }
 

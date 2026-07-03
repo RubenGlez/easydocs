@@ -220,4 +220,29 @@ describe('renderClassifiedDiff', () => {
     expect(txt).not.toContain('**')
     expect(txt).toMatch(/change/)
   })
+
+  it('does not report a parameter reordering as any change (C10)', () => {
+    const op = (params: unknown[]) => ({
+      paths: { '/users': { get: { responses: { '200': { description: 'OK' } }, parameters: params } } },
+    })
+    const p1 = [
+      { name: 'page', in: 'query', schema: { type: 'integer' } },
+      { name: 'q', in: 'query', schema: { type: 'string' } },
+    ]
+    const p2 = [p1[1], p1[0]] // same params, swapped order
+    const cd = classifyDiff(diffSpecs(op(p1), op(p2)), op(p1), op(p2))
+    expect(cd.counts.breaking).toBe(0)
+    expect(cd.counts.added + cd.counts.removed + cd.counts.changed).toBe(0)
+  })
+
+  it('groups a whole-operation removal on a dotted route as one breaking change (C10)', () => {
+    const withOp = {
+      paths: { '/v1.1/users': { get: { responses: { '200': { description: 'OK' } } } } },
+    }
+    const withoutOp = { paths: { '/v1.1/users': {} } }
+    const cd = classifyDiff(diffSpecs(withOp, withoutOp), withOp, withoutOp)
+    // The route contains a dot; it must still group under one endpoint, not split.
+    expect(cd.groups.some((g) => g.endpoint === 'GET /v1.1/users')).toBe(true)
+    expect(cd.severity).toBe('breaking')
+  })
 })

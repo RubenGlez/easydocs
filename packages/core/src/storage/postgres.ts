@@ -74,15 +74,29 @@ const INIT_SQL = `
 
 export type PgDB = ReturnType<typeof createPgDB>
 
+// With a pool > 1 the schema-init command and the first query can land on
+// different connections, so a capture can race the DDL. Memoize init and await
+// it before every adapter query.
+const pgInitPromises = new WeakMap<object, Promise<void>>()
+
 export function createPgDB(url: string, poolSize?: number) {
   const client = postgresJs(url, { max: poolSize ?? 10 })
   const db = drizzle(client, { schema: { projects: pgProjects, endpoints: pgEndpoints } })
 
-  client.unsafe(INIT_SQL).catch((err: unknown) => {
-    console.error('[EasyDocs] Failed to initialize Postgres schema:', err)
-  })
+  const ready = client
+    .unsafe(INIT_SQL)
+    .then(() => {})
+    .catch((err: unknown) => {
+      console.error('[EasyDocs] Failed to initialize Postgres schema:', err)
+    })
 
+  pgInitPromises.set(db as object, ready)
   return db
+}
+
+/** Resolves once a Postgres db's schema initialization has completed. */
+export function pgDbReady(db: PgDB): Promise<void> {
+  return pgInitPromises.get(db as object) ?? Promise.resolve()
 }
 
 // ─── Projects ────────────────────────────────────────────────────────────────
@@ -102,6 +116,17 @@ export async function pgFindOrCreateProject(db: PgDB, slug: string): Promise<str
     .values({ name: slug, slug })
     .returning({ id: pgProjects.id })
   return result[0].id
+}
+
+/** Resolve a project slug to its id WITHOUT creating it. For read paths. */
+export async function pgFindProject(db: PgDB, slug: string): Promise<string | null> {
+  const existing = await db
+    .select()
+    .from(pgProjects)
+    .where(eq(pgProjects.slug, slug))
+    .limit(1)
+    .then((r) => r[0])
+  return existing?.id ?? null
 }
 
 export async function pgGetAllProjects(db: PgDB) {
@@ -248,32 +273,27 @@ function toProject(row: typeof pgProjects.$inferSelect): Project {
 
 export function createPostgresAdapter(url: string, poolSize?: number): DatabaseAdapter {
   const db = createPgDB(url, poolSize)
+  // Gate every call on schema init (resolves once, then a no-op).
+  const ready = pgDbReady(db)
+  const after = <T>(fn: () => Promise<T>): Promise<T> => ready.then(fn)
   return {
-    findOrCreateProject: (slug) => pgFindOrCreateProject(db, slug),
-    getEndpointByPathMethod: async (projectId, path, method) => {
-      const row = await pgGetByPathMethod(db, projectId, path, method)
-      return row ? toEndpoint(row) : undefined
-    },
+    findOrCreateProject: (slug) => after(() => pgFindOrCreateProject(db, slug)),
+    findProject: (slug) => after(() => pgFindProject(db, slug)),
+    getEndpointByPathMethod: (projectId, path, method) =>
+      after(async () => {
+        const row = await pgGetByPathMethod(db, projectId, path, method)
+        return row ? toEndpoint(row) : undefined
+      }),
     upsertEndpoint: (projectId, path, method, spec, responseHash) =>
-      pgUpsertEndpoint(db, projectId, path, method, spec, responseHash),
-    getAllProjects: async () => {
-      const rows = await pgGetAllProjects(db)
-      return rows.map(toProject)
-    },
-    getAllEndpoints: async () => {
-      const rows = await pgGetAll(db)
-      return rows.map(toEndpoint)
-    },
-    getEndpointsByProject: async (projectId) => {
-      const rows = await pgGetEndpointsByProject(db, projectId)
-      return rows.map(toEndpoint)
-    },
-    getEndpointVersions: async (endpointId) => {
-      const rows = await pgGetEndpointVersions(db, endpointId)
-      return rows as unknown as SpecVersion[]
-    },
-    deleteEndpointById: (id) => pgDeleteById(db, id),
-    saveManualSpec: (id, manualSpec) => pgSaveManualSpec(db, id, manualSpec),
-    resolveConflict: (id, keep) => pgResolveConflict(db, id, keep),
+      after(() => pgUpsertEndpoint(db, projectId, path, method, spec, responseHash)),
+    getAllProjects: () => after(async () => (await pgGetAllProjects(db)).map(toProject)),
+    getAllEndpoints: () => after(async () => (await pgGetAll(db)).map(toEndpoint)),
+    getEndpointsByProject: (projectId) =>
+      after(async () => (await pgGetEndpointsByProject(db, projectId)).map(toEndpoint)),
+    getEndpointVersions: (endpointId) =>
+      after(async () => (await pgGetEndpointVersions(db, endpointId)) as unknown as SpecVersion[]),
+    deleteEndpointById: (id) => after(() => pgDeleteById(db, id)),
+    saveManualSpec: (id, manualSpec) => after(() => pgSaveManualSpec(db, id, manualSpec)),
+    resolveConflict: (id, keep) => after(() => pgResolveConflict(db, id, keep)),
   }
 }
