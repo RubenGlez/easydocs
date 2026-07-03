@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveModel } from '../ai/provider.js'
+import { resolveModel, resolveProvider } from '../ai/provider.js'
 
 type ConcreteModel = { modelId: string; provider: string }
 const concrete = (m: ReturnType<typeof resolveModel>) => m as unknown as ConcreteModel
@@ -118,6 +118,29 @@ describe('resolveModel', () => {
       withEnv({ ...NO_KEYS, ANTHROPIC_API_KEY: 'sk-ant-test' }, () => {
         const model = concrete(resolveModel({ provider: 'openai', apiKey: 'sk-test' }))
         expect(model.provider).toContain('openai')
+      })
+    })
+  })
+
+  describe('offline mode', () => {
+    it('pins to local ollama even when a hosted key is present in the env', () => {
+      withEnv({ ...NO_KEYS, ANTHROPIC_API_KEY: 'sk-ant-test' }, () => {
+        expect(resolveProvider(undefined, true)).toBe('ollama')
+        const model = concrete(resolveModel(undefined, true))
+        expect(model.modelId).toBe('llama3.2')
+      })
+    })
+
+    it('allows an explicit ollama provider', () => {
+      withEnv(NO_KEYS, () => {
+        expect(resolveProvider({ provider: 'ollama' }, true)).toBe('ollama')
+      })
+    })
+
+    it('throws when a hosted provider is explicitly configured', () => {
+      withEnv(NO_KEYS, () => {
+        expect(() => resolveProvider({ provider: 'openai', apiKey: 'sk-test' }, true)).toThrow(/offline/i)
+        expect(() => resolveModel({ provider: 'anthropic', apiKey: 'sk-test' }, true)).toThrow(/offline/i)
       })
     })
   })

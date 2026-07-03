@@ -46,6 +46,10 @@ const PrivacyRulesSchema = z.object({
 
 const PrivacyConfigSchema = z.object({
   enabled: z.boolean().optional(),
+  // Strict local-first guarantee: only ever use a local Ollama model, never send
+  // captured data to a hosted provider. Pins the provider to ollama (ignoring env
+  // keys) and fails fast if a hosted provider is explicitly configured.
+  offline: z.boolean().optional(),
   placeholder: z.string().optional(),
   allowlist: z.array(z.string()).optional(),
   customRules: PrivacyRulesSchema.optional(),

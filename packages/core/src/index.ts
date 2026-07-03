@@ -25,6 +25,14 @@ export { buildOperation } from './spec/builder.js'
 export { buildFullSpec } from './spec/assemble.js'
 export { diffSpecs, renderDiff, isEmptyDiff, classifyDiff, shouldFail, renderClassifiedDiff } from './spec/diff.js'
 export type { SpecDiff, RenderDiffOptions, Severity, ClassifiedEntry, EndpointGroup, ClassifiedDiff, FailOn } from './spec/diff.js'
+export { computeDrift, renderDrift, isEmptyDrift, driftCount } from './spec/drift.js'
+export type {
+  DriftReport,
+  DriftFinding,
+  DriftKind,
+  ComputeDriftOptions,
+  RenderDriftOptions,
+} from './spec/drift.js'
 export { OperationSchema } from './spec/schema.js'
 export type { Operation } from './spec/schema.js'
 export { buildCaptureEvent, tryParseJson } from './event.js'
@@ -33,3 +41,7 @@ export { parseConfig, EasyDocsConfigSchema } from './types.js'
 export type { CaptureEvent, EasyDocsConfig, HttpMethod, AIConfig, StorageConfig, PrivacyConfig } from './types.js'
 export { detect, markSensitiveProperties } from './privacy/detect.js'
 export type { DetectResult } from './privacy/detect.js'
+export { collectSensitiveFields, renderAudit } from './privacy/audit.js'
+export type { SensitiveField, EndpointAudit, RenderAuditOptions } from './privacy/audit.js'
+export { resolveModel, resolveProvider, isHostedProvider } from './ai/provider.js'
+export type { Provider } from './ai/provider.js'

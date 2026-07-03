@@ -6,6 +6,8 @@ export default defineConfig({
     'storage/schema': 'src/storage/schema.ts',
     'spec/schema': 'src/spec/schema.ts',
     'spec/diff': 'src/spec/diff.ts',
+    'spec/drift': 'src/spec/drift.ts',
+    'privacy/audit': 'src/privacy/audit.ts',
     dashboard: 'src/dashboard.ts',
   },
   format: ['esm', 'cjs'],

@@ -50,9 +50,10 @@ const MAX_ATTEMPTS = 3
 export async function buildOperation(
   event: CaptureEvent,
   existingSpec: unknown | null,
-  aiConfig?: AIConfig
+  aiConfig?: AIConfig,
+  offline?: boolean
 ): Promise<Operation> {
-  const model = resolveModel(aiConfig)
+  const model = resolveModel(aiConfig, offline)
   const trimmedResponse = trimResponse(event.response)
   const detectedAuth = detectAuthSchemes(event.requestHeaders, event.query)
 

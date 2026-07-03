@@ -5,6 +5,36 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Docs-vs-reality drift detection: a new `easydocs drift <spec>` command compares
+  a committed OpenAPI spec against the spec EasyDocs derives from real traffic and
+  reports where documentation has diverged from reality — endpoints/fields observed
+  but undocumented, documented but never observed, and values that contradict what
+  traffic shows. With one argument it reads observed traffic from the local capture
+  DB; with two it compares spec files directly. Takes `--project` and `--markdown`
+  (for PR comments), and, like `diff`, is informational and never fails the build.
+  The engine is exported from `@easydocs/core` (`computeDrift` / `renderDrift`, also
+  at the `@easydocs/core/spec/drift` subpath).
+- Dashboard drift view: the dashboard now surfaces docs-vs-reality drift. It reads
+  the committed spec from `EASYDOCS_SPEC_PATH` (default `./openapi.json`), compares
+  it against observed traffic, badges each drifted endpoint in the sidebar, and
+  shows a panel breaking down undocumented / mismatch / unobserved findings. Served
+  by a new local `/api/drift` route — the comparison never leaves the machine.
+- Strict offline mode (`privacy.offline: true`): a hard local-first guarantee for
+  regulated / air-gapped setups. EasyDocs pins itself to a local Ollama model,
+  ignores any hosted API keys present in the environment, and fails fast at startup
+  if a hosted provider is explicitly configured — so no captured payload can ever
+  reach a third-party service. `isHostedProvider` is exported from `@easydocs/core`.
+- Redaction audit: EasyDocs can now show exactly which fields it protects. A new
+  `collectSensitiveFields` helper (exported from `@easydocs/core` and the pure
+  `@easydocs/core/privacy/audit` subpath) reads the `x-easydocs-sensitive` markers
+  back out of a spec, and the dashboard surfaces them in a "Sensitive fields" panel
+  grouped by endpoint — making the PII-safe promise provable, not just a claim.
+  A new `easydocs audit` command lists the same inventory from the terminal (with
+  `--project` and `--markdown`), so a pipeline can assert what is being protected.
+
 ## [0.8.1] - 2026-07-02
 
 ### Changed

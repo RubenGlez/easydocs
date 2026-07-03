@@ -4,7 +4,7 @@ import { createAdapter } from './storage/adapter.js'
 import { hashShape } from './shape.js'
 import { maybeStartDashboard } from './dashboard.js'
 import { detect, markSensitiveProperties } from './privacy/detect.js'
-import { resolveProvider } from './ai/provider.js'
+import { resolveProvider, isHostedProvider } from './ai/provider.js'
 import type { CaptureEvent, EasyDocsConfig } from './types.js'
 
 const DEFAULT_PROJECT = 'default'
@@ -42,7 +42,18 @@ export interface Capturer {
 export function createCapturer(config: EasyDocsConfig): Capturer {
   const adapter = createAdapter(config.storage)
   const queue = new CaptureQueue()
-  warnIfNoAIKey(config)
+  const offline = config.privacy?.offline === true
+
+  if (offline) {
+    // Fail fast on a contradictory hosted provider, before any traffic is captured.
+    resolveProvider(config.ai, true)
+    console.warn(
+      '\n[EasyDocs] Offline mode enabled — using a local Ollama model only.\n' +
+      '  No captured data will be sent to a hosted AI provider.\n'
+    )
+  } else {
+    warnIfNoAIKey(config)
+  }
 
   return {
     capture(event: CaptureEvent) {
@@ -71,10 +82,12 @@ export function createCapturer(config: EasyDocsConfig): Capturer {
         if (privacyEnabled) {
           const result = detect(event, config.privacy)
           sensitivePaths = result.sensitivePaths
-          if (resolveProvider(config.ai) !== 'ollama') eventForAI = result.redactedEvent
+          // Only a hosted provider receives payloads, so only then do we swap in the
+          // redacted event. Offline mode is always local, so real values are kept.
+          if (isHostedProvider(resolveProvider(config.ai, offline))) eventForAI = result.redactedEvent
         }
 
-        const spec = await buildOperation(eventForAI, existing?.spec ?? null, config.ai)
+        const spec = await buildOperation(eventForAI, existing?.spec ?? null, config.ai, offline)
         markSensitiveProperties(spec, sensitivePaths)
         await adapter.upsertEndpoint(projectId, event.path, event.method, spec, responseHash)
       })
