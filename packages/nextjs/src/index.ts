@@ -1,5 +1,20 @@
 import { createCapturer, parseConfig, buildCaptureEvent } from '@easydocs/core'
-import type { EasyDocsConfig } from '@easydocs/core'
+import type { EasyDocsConfig, Capturer } from '@easydocs/core'
+
+// Every wrapped route handler would otherwise build its own capturer — its own
+// queue, its own libsql client, its own no-key warning. Share one per distinct
+// config so a 50-route app opens one DB client, not 50.
+const capturerCache = new Map<string, Capturer>()
+function getCapturer(config?: EasyDocsConfig): Capturer {
+  const parsed = parseConfig(config)
+  const key = JSON.stringify(parsed)
+  let capturer = capturerCache.get(key)
+  if (!capturer) {
+    capturer = createCapturer(parsed)
+    capturerCache.set(key, capturer)
+  }
+  return capturer
+}
 
 // ─── Local structural types (avoid importing from next at build time) ──────────
 
@@ -35,8 +50,7 @@ type AppRouterContext = { params?: Promise<Record<string, string>> | Record<stri
 type AppRouterHandler = (req: NextRequestLike, ctx?: AppRouterContext) => Promise<Response> | Response
 
 export function withEasydocs(handler: AppRouterHandler, config?: EasyDocsConfig): AppRouterHandler {
-  const parsedConfig = parseConfig(config)
-  const capturer = createCapturer(parsedConfig)
+  const capturer = getCapturer(config)
   return async (req, ctx) => {
     const startedAt = Date.now()
     const response = await handler(req, ctx)
@@ -90,8 +104,7 @@ export function withEasydocsPagesHandler(
   handler: PagesHandler,
   config?: EasyDocsConfig
 ): PagesHandler {
-  const parsedConfig = parseConfig(config)
-  const capturer = createCapturer(parsedConfig)
+  const capturer = getCapturer(config)
   return async (req, res) => {
     const startedAt = Date.now()
     const originalJson = res.json.bind(res)

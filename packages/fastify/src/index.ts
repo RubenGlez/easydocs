@@ -10,12 +10,17 @@ const plugin: FastifyPluginAsync<EasyDocsConfig> = async (fastify, rawConfig) =>
   fastify.addHook(
     'onSend',
     async (request: FastifyRequest, reply: FastifyReply, payload: unknown) => {
+      // No matched route means this hit no handler (404s, scanner probes like
+      // /wp-login.php). Skip it: capturing would create a junk endpoint row and
+      // an LLM call driven by unauthenticated traffic.
+      if (!request.routeOptions?.url) return payload
+
       const startedAt = (request as unknown as { easydocsStart?: number }).easydocsStart ?? Date.now()
 
       capturer.capture(
         buildCaptureEvent({
           method: request.method,
-          path: request.routeOptions?.url ?? request.url.split('?')[0],
+          path: request.routeOptions.url,
           query: request.query as Record<string, unknown>,
           params: request.params as Record<string, unknown>,
           requestBody: request.body,

@@ -20,6 +20,9 @@ const AIConfigSchema = z.object({
   model: z.string().optional(),
   apiKey: z.string().optional(),
   baseUrl: z.string().optional(),
+  // Abort a single generation attempt after this many ms so a hung provider
+  // can't stall the capture queue forever. Default 30s.
+  timeoutMs: z.number().int().positive().optional(),
 }).strict()
 
 const StorageConfigSchema = z.object({

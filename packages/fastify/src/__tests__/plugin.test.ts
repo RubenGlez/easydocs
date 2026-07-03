@@ -72,6 +72,20 @@ describe('fastify plugin', () => {
     )
   })
 
+  it('captures the normalized route template, not the concrete URL', async () => {
+    const app = await makeApp()
+    await app.inject({ method: 'GET', url: '/users/42' })
+    expect(getCaptureMock()).toHaveBeenCalledWith(
+      expect.objectContaining({ path: '/users/{id}' })
+    )
+  })
+
+  it('does NOT capture requests with no matched route (404s / scanner noise)', async () => {
+    const app = await makeApp()
+    await app.inject({ method: 'GET', url: '/wp-login.php' })
+    expect(getCaptureMock()).not.toHaveBeenCalled()
+  })
+
   it('passes config to createCapturer', async () => {
     await makeApp({ project: 'my-api' })
     expect(createCapturer).toHaveBeenCalledWith(
