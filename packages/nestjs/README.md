@@ -72,10 +72,10 @@ EasyDocsModule.forRoot({
 
 ```bash
 npm install -D @easydocs/dashboard
-npx easydocs dashboard
+npx @easydocs/cli dashboard
 
 # Or export to a file
-npx easydocs export > openapi.json
+npx @easydocs/cli export > openapi.json
 ```
 
 See [@easydocs/core](../core) for the full configuration reference.
