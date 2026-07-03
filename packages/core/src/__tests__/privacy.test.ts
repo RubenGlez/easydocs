@@ -76,6 +76,15 @@ describe('detect', () => {
     expect(items[1].name).toBe('ok')
   })
 
+  it('flags a credit-card number sent as a JSON number, not just a string (H3)', () => {
+    const { redactedEvent } = detect(
+      event({ body: { amount: 42, card: 4111111111111111 } })
+    )
+    const body = redactedEvent.body as Record<string, unknown>
+    expect(body.card).toBe('[REDACTED]')
+    expect(body.amount).toBe(42)
+  })
+
   it('preserves the auth scheme prefix so auth detection still works', () => {
     const { redactedEvent } = detect(
       event({ requestHeaders: { authorization: 'Bearer secret-token-value' } })

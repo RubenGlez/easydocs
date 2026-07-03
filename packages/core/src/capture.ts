@@ -18,6 +18,16 @@ const CAPTURED_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
 // payloads (Buffers/streams serialize as {type:'Buffer',data:[…]} garbage) and
 // non-JSON strings (text/plain, HTML) that adapters couldn't parse. Skip these
 // captures rather than feed noise to the model. `null` (no body) is fine.
+/** Approximate serialized byte length of a body, for the maxBodySize cap. */
+function jsonSize(value: unknown): number {
+  if (value == null) return 0
+  try {
+    return JSON.stringify(value)?.length ?? 0
+  } catch {
+    return 0
+  }
+}
+
 function isNonJsonBody(value: unknown): boolean {
   if (value == null) return false
   if (typeof value === 'string') return true
@@ -56,14 +66,23 @@ function parseSeenShapes(raw?: string | null): string[] {
   return [raw]
 }
 
+const PROVIDER_ENV_KEY: Record<string, string> = {
+  openai: 'OPENAI_API_KEY',
+  anthropic: 'ANTHROPIC_API_KEY',
+  deepseek: 'DEEPSEEK_API_KEY',
+}
+
 function warnIfNoAIKey(config: EasyDocsConfig) {
   const provider = config.ai?.provider
   if (provider === 'ollama') return
-  const hasKey =
-    config.ai?.apiKey ||
-    process.env.OPENAI_API_KEY ||
-    process.env.ANTHROPIC_API_KEY ||
-    process.env.DEEPSEEK_API_KEY
+  if (config.ai?.apiKey) return
+
+  // With an explicit hosted provider, only its matching env key counts — a
+  // DEEPSEEK_API_KEY does not satisfy provider:'openai' (which would otherwise
+  // warn nothing, then 401 on every generation).
+  const hasKey = provider
+    ? !!process.env[PROVIDER_ENV_KEY[provider]]
+    : !!(process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.DEEPSEEK_API_KEY)
   if (hasKey) return
 
   if (provider) {
@@ -107,7 +126,12 @@ export function createCapturer(config: EasyDocsConfig): Capturer {
       if (!CAPTURED_METHODS.has(event.method)) return
       if (isNonJsonBody(event.response)) return
 
-      const { ignoreRoutes, includePaths } = config.capture ?? {}
+      const { ignoreRoutes, includePaths, maxBodySize } = config.capture ?? {}
+      // Skip oversized payloads rather than deep-clone/redact/hash a huge body on
+      // every capture. Enforces the documented capture.maxBodySize cap.
+      if (maxBodySize !== undefined && (jsonSize(event.body) > maxBodySize || jsonSize(event.response) > maxBodySize)) {
+        return
+      }
       if (ignoreRoutes?.some((r) => event.path.startsWith(r))) return
       if (includePaths && !includePaths.some((p) => event.path.startsWith(p))) return
 

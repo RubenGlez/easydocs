@@ -241,6 +241,10 @@ export async function resolveConflict(db: DB, id: string, keep: 'ai' | 'manual')
 }
 
 export async function deleteEndpointById(db: DB, id: string) {
+  // SQLite only honors ON DELETE CASCADE when PRAGMA foreign_keys=ON, which
+  // @libsql/client leaves off by default — so delete the child rows explicitly
+  // to avoid orphaning this endpoint's spec_versions.
+  await db.delete(specVersions).where(eq(specVersions.endpointId, id))
   await db.delete(endpoints).where(eq(endpoints.id, id))
 }
 

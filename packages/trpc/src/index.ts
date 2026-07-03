@@ -34,11 +34,20 @@ const TRPC_HTTP_STATUS: Record<string, number> = {
  * flattens to a string map. Object inputs map key-for-key; a primitive or array
  * input surfaces under a single `input` key so it is still documented.
  */
+// The capture core stringifies query values with String(), which would turn a
+// nested object/array into "[object Object]". JSON-encode non-primitives first so
+// the documented parameter keeps its real shape.
+function encodeQueryValue(v: unknown): unknown {
+  return v !== null && typeof v === 'object' ? JSON.stringify(v) : v
+}
+
 function toQueryRecord(input: unknown): Record<string, unknown> {
   if (input && typeof input === 'object' && !Array.isArray(input)) {
-    return input as Record<string, unknown>
+    return Object.fromEntries(
+      Object.entries(input as Record<string, unknown>).map(([k, v]) => [k, encodeQueryValue(v)])
+    )
   }
-  return input === undefined ? {} : { input }
+  return input === undefined ? {} : { input: encodeQueryValue(input) }
 }
 
 /**

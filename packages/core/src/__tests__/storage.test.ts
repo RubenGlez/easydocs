@@ -114,6 +114,20 @@ describe('endpoints', () => {
     const list = await adapter.getEndpointsByProject(projectId)
     expect(list).toHaveLength(0)
   })
+
+  it('deleting an endpoint also removes its spec_versions (no orphans) (H6)', async () => {
+    const projectId = await adapter.findOrCreateProject('api')
+    const id = await adapter.upsertEndpoint(projectId, '/users', 'GET', MOCK_SPEC, 'h1')
+    expect((await adapter.getEndpointVersions(id)).length).toBeGreaterThan(0)
+    await adapter.deleteEndpointById(id)
+    expect(await adapter.getEndpointVersions(id)).toHaveLength(0)
+  })
+
+  it('findProject resolves an existing slug and returns null for an unknown one (C7)', async () => {
+    const created = await adapter.findOrCreateProject('known')
+    expect(await adapter.findProject('known')).toBe(created)
+    expect(await adapter.findProject('nope')).toBeNull()
+  })
 })
 
 describe('manual spec editing', () => {
