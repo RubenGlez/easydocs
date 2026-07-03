@@ -9,6 +9,33 @@ import type { CaptureEvent, EasyDocsConfig } from './types.js'
 
 const DEFAULT_PROJECT = 'default'
 
+// How many distinct request/response shapes to remember per endpoint before
+// evicting the oldest. Bounds the tracking string; large enough to cover an
+// endpoint's realistic set of status-class × shape combinations.
+const MAX_SEEN_SHAPES = 50
+
+// A capture only needs (re)generation when its *shape* is one we haven't
+// documented yet. The key folds in the status class (so an endpoint that mixes
+// 200 and 404 remembers both instead of thrashing) and the request-body shape
+// (so a new request field re-triggers generation, not just a changed response).
+function shapeKey(event: CaptureEvent): string {
+  const statusClass = Math.floor(event.status / 100)
+  return `${statusClass}:${hashShape(event.body)}:${hashShape(event.response)}`
+}
+
+// The endpoint's stored `responseHash` column holds the JSON-encoded set of seen
+// shape keys. Tolerates the legacy format (a single bare response-shape hash).
+function parseSeenShapes(raw?: string | null): string[] {
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) return parsed as string[]
+  } catch {
+    // not JSON — a pre-set-tracking bare hash
+  }
+  return [raw]
+}
+
 function warnIfNoAIKey(config: EasyDocsConfig) {
   const provider = config.ai?.provider
   if (provider === 'ollama') return
@@ -68,10 +95,12 @@ export function createCapturer(config: EasyDocsConfig): Capturer {
       const projectSlug = config.project ?? DEFAULT_PROJECT
 
       queue.add(async () => {
-        const responseHash = hashShape(event.response)
+        const key = shapeKey(event)
         const projectId = await adapter.findOrCreateProject(projectSlug)
         const existing = await adapter.getEndpointByPathMethod(projectId, event.path, event.method)
-        if (existing?.responseHash === responseHash && existing?.spec) return
+        const seen = parseSeenShapes(existing?.responseHash)
+        // Skip only when this exact shape has already been documented.
+        if (existing?.spec && seen.includes(key)) return
 
         // Detect PII/secrets. Redact before sending to a hosted provider so values
         // never leave the machine; for local Ollama keep real values (better
@@ -89,7 +118,16 @@ export function createCapturer(config: EasyDocsConfig): Capturer {
 
         const spec = await buildOperation(eventForAI, existing?.spec ?? null, config.ai, offline)
         markSensitiveProperties(spec, sensitivePaths)
-        await adapter.upsertEndpoint(projectId, event.path, event.method, spec, responseHash)
+        // Record this shape as seen (move-to-end, capped) so future identical
+        // captures are skipped while genuinely new shapes still regenerate.
+        const nextSeen = [...seen.filter((k) => k !== key), key].slice(-MAX_SEEN_SHAPES)
+        await adapter.upsertEndpoint(
+          projectId,
+          event.path,
+          event.method,
+          spec,
+          JSON.stringify(nextSeen)
+        )
       })
     },
   }

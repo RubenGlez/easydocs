@@ -6,7 +6,7 @@ import { json } from '@codemirror/lang-json'
 import { oneDark } from '@codemirror/theme-one-dark'
 import type { Endpoint } from '@easydocs/core/schema'
 import type { Operation } from '@easydocs/core/spec/schema'
-import { OperationSchema } from '@easydocs/core/spec/schema'
+import { OperationSchema, activeSpec as resolveActiveSpec } from '@easydocs/core/spec/schema'
 
 interface Props {
   endpoint: Endpoint
@@ -30,7 +30,7 @@ function validate(raw: string): string | null {
 }
 
 export function SpecEditor({ endpoint, onSaved, onCancel }: Props) {
-  const activeSpec = endpoint.isManuallyEdited ? endpoint.manualSpec : endpoint.spec
+  const activeSpec = resolveActiveSpec(endpoint)
   const [value, setValue] = useState(() => JSON.stringify(activeSpec, null, 2))
   const validationError = validate(value)
   const [saveError, setSaveError] = useState<string | null>(null)

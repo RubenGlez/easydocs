@@ -33,7 +33,7 @@ export type {
   ComputeDriftOptions,
   RenderDriftOptions,
 } from './spec/drift.js'
-export { OperationSchema } from './spec/schema.js'
+export { OperationSchema, activeSpec } from './spec/schema.js'
 export type { Operation } from './spec/schema.js'
 export { buildCaptureEvent, tryParseJson } from './event.js'
 export type { RawCaptureInput } from './event.js'
