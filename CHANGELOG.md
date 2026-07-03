@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Drift demo: `pnpm demo:drift` shows docs-vs-reality drift end to end in one
+  command — no API key, no setup. It seeds a throwaway database with sample
+  observed traffic, writes a committed `openapi.json` that has drifted from it,
+  and prints the report, so the flagship check is visible before wiring up a real
+  API.
 - Docs-vs-reality drift detection: a new `easydocs drift <spec>` command compares
   a committed OpenAPI spec against the spec EasyDocs derives from real traffic and
   reports where documentation has diverged from reality — endpoints/fields observed

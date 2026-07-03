@@ -129,6 +129,16 @@ reality. This is the one check only EasyDocs can run — it's the only tool hold
 both the committed spec and the live traffic at the same time. Like `diff`, it's
 informational and never fails the build.
 
+**See it in one command** — no setup, no API key. Clone this repo and run:
+
+```bash
+pnpm demo:drift
+```
+
+It seeds a sample scenario (observed traffic vs. a drifted `openapi.json`) and
+prints the report, so you can see all three kinds of drift before wiring up your
+own API.
+
 ---
 
 ## How it works
