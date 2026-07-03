@@ -92,9 +92,14 @@ async function runDashboard(args: string[]) {
 
   const nextBin = join(dashboardDir, 'node_modules', '.bin', 'next')
   const cmd = existsSync(nextBin) ? nextBin : 'next'
-  const mode = prod ? ['start', '--port', String(port)] : ['dev', '--port', String(port)]
+  // The dashboard is an unauthenticated read/write surface, so bind it to
+  // loopback by default. Set EASYDOCS_DASHBOARD_HOST=0.0.0.0 to expose it
+  // deliberately (e.g. a trusted network).
+  const host = process.env.EASYDOCS_DASHBOARD_HOST ?? '127.0.0.1'
+  const sub = prod ? 'start' : 'dev'
+  const mode = [sub, '--port', String(port), '--hostname', host]
 
-  console.log(`[EasyDocs] Starting dashboard (${prod ? 'production' : 'dev'}) → http://localhost:${port}`)
+  console.log(`[EasyDocs] Starting dashboard (${prod ? 'production' : 'dev'}) → http://${host}:${port}`)
 
   const child = spawn(cmd, mode, {
     cwd: dashboardDir,

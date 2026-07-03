@@ -36,4 +36,23 @@ describe('CaptureQueue', () => {
     expect(queue.size).toBe(1)
     resolve()
   })
+
+  it('drops the oldest task when the pending bound is exceeded', async () => {
+    const queue = new CaptureQueue(2)
+    let release!: () => void
+    const blocker = new Promise<void>((r) => { release = r })
+    const ran: number[] = []
+
+    // First task blocks the worker so the rest accumulate as pending.
+    queue.add(() => blocker)
+    queue.add(async () => { ran.push(1) })
+    queue.add(async () => { ran.push(2) })
+    queue.add(async () => { ran.push(3) }) // pending hits the bound → evicts task 1
+
+    expect(queue.size).toBe(2)
+    release()
+    await queue.flush()
+    // Task 1 was evicted before it ran; 2 and 3 survive in order.
+    expect(ran).toEqual([2, 3])
+  })
 })

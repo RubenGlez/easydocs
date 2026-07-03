@@ -46,6 +46,7 @@ function extractJson(text: string): unknown {
 }
 
 const MAX_ATTEMPTS = 3
+const DEFAULT_TIMEOUT_MS = 30_000
 
 export async function buildOperation(
   event: CaptureEvent,
@@ -54,6 +55,7 @@ export async function buildOperation(
   offline?: boolean
 ): Promise<Operation> {
   const model = resolveModel(aiConfig, offline)
+  const timeoutMs = aiConfig?.timeoutMs ?? DEFAULT_TIMEOUT_MS
   const trimmedResponse = trimResponse(event.response)
   const detectedAuth = detectAuthSchemes(event.requestHeaders, event.query)
 
@@ -135,7 +137,14 @@ export async function buildOperation(
         ? basePrompt
         : `${basePrompt}\n\nYour previous response was invalid: ${lastError}\nReturn ONLY a corrected JSON object.`
 
-    const { text } = await generateText({ model, system, prompt })
+    const { text } = await generateText({
+      model,
+      system,
+      prompt,
+      // Bound each attempt so a provider that hangs (no response, no error)
+      // can't block the single-worker capture queue indefinitely.
+      abortSignal: AbortSignal.timeout(timeoutMs),
+    })
 
     try {
       const parsed = OperationSchema.safeParse(extractJson(text))

@@ -53,8 +53,11 @@ export async function maybeStartDashboard(port = 4999): Promise<void> {
 
   const nextBin = join(dashboardDir, 'node_modules', '.bin', 'next')
   const cmd = existsSync(nextBin) ? nextBin : 'next'
+  // Bind to loopback by default — the dashboard has no auth. Opt into wider
+  // exposure with EASYDOCS_DASHBOARD_HOST.
+  const host = process.env.EASYDOCS_DASHBOARD_HOST ?? '127.0.0.1'
 
-  const child = spawn(cmd, ['dev', '--port', String(port)], {
+  const child = spawn(cmd, ['dev', '--port', String(port), '--hostname', host], {
     cwd: dashboardDir,
     stdio: 'ignore',
     detached: true,
@@ -62,5 +65,5 @@ export async function maybeStartDashboard(port = 4999): Promise<void> {
   })
 
   child.unref()
-  console.log(`[EasyDocs] Dashboard → http://localhost:${port}`)
+  console.log(`[EasyDocs] Dashboard → http://${host}:${port}`)
 }
