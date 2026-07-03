@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { collectSensitiveFields } from '../privacy/audit.js'
+import { collectSensitiveFields, renderAudit } from '../privacy/audit.js'
+import type { EndpointAudit } from '../privacy/audit.js'
 import { markSensitiveProperties } from '../privacy/detect.js'
 import type { Operation } from '../spec/schema.js'
 
@@ -55,6 +56,27 @@ describe('collectSensitiveFields', () => {
 
   it('returns an empty array when nothing is flagged', () => {
     expect(collectSensitiveFields(baseOperation())).toEqual([])
+  })
+
+  it('renders a per-endpoint audit in plain text and markdown', () => {
+    const items: EndpointAudit[] = [
+      { path: '/auth/login', method: 'POST', fields: [{ location: 'requestBody', field: 'password' }] },
+      { path: '/products', method: 'GET', fields: [] }, // no sensitive fields → omitted
+    ]
+    const txt = renderAudit(items)
+    expect(txt).toMatch(/1 sensitive field across 1 endpoint/)
+    expect(txt).toContain('POST /auth/login')
+    expect(txt).toContain('password (requestBody)')
+    expect(txt).not.toContain('/products')
+
+    const md = renderAudit(items, { markdown: true })
+    expect(md).toContain('`POST /auth/login`')
+    expect(md).toContain('- `password` (requestBody)')
+  })
+
+  it('renders a no-fields message in both modes', () => {
+    expect(renderAudit([])).toContain('No sensitive fields')
+    expect(renderAudit([], { markdown: true })).toContain('No sensitive fields')
   })
 
   it('de-duplicates by location and field', () => {

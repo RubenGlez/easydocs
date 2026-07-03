@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `@easydocs/core/privacy/audit` subpath) reads the `x-easydocs-sensitive` markers
   back out of a spec, and the dashboard surfaces them in a "Sensitive fields" panel
   grouped by endpoint — making the PII-safe promise provable, not just a claim.
+  A new `easydocs audit` command lists the same inventory from the terminal (with
+  `--project` and `--markdown`), so a pipeline can assert what is being protected.
 
 ## [0.7.0] - 2026-07-01
 

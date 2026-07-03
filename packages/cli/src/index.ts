@@ -1,6 +1,7 @@
 import { createDB, getAllEndpoints, getEndpointsByProject, findOrCreateProject, buildFullSpec } from '@easydocs/core'
 import { createCapturer, parseConfig, diffSpecs, renderDiff, computeDrift, renderDrift } from '@easydocs/core'
-import type { HttpMethod } from '@easydocs/core'
+import { collectSensitiveFields, renderAudit } from '@easydocs/core'
+import type { HttpMethod, EndpointAudit } from '@easydocs/core'
 import { createServer } from 'http'
 import { createRequire } from 'module'
 import { existsSync, readFileSync } from 'fs'
@@ -23,13 +24,16 @@ switch (command) {
   case 'drift':
     await runDrift(args)
     break
+  case 'audit':
+    await runAudit(args)
+    break
   case 'proxy':
   case undefined:
     await runProxy(args)
     break
   default:
     console.error(
-      `Unknown command: ${command}\n\nUsage:\n  easydocs [proxy]           Start proxy server\n  easydocs dashboard         Start the docs dashboard\n  easydocs export            Export spec to stdout\n  easydocs diff <a> <b>      Diff two spec files (JSON or YAML)\n  easydocs drift <spec>      Check a committed spec against observed traffic\n\nFlags:\n  --project=<slug>           Scope to a project (default: all)\n  --port=<n>                 Port for proxy (default: 3999) or dashboard (default: 4999)\n  --yaml                     Export as YAML instead of JSON\n  --markdown                 Diff/drift: emit Markdown (for PR comments) instead of plain text\n  --prod                     Dashboard: run next start instead of next dev`
+      `Unknown command: ${command}\n\nUsage:\n  easydocs [proxy]           Start proxy server\n  easydocs dashboard         Start the docs dashboard\n  easydocs export            Export spec to stdout\n  easydocs diff <a> <b>      Diff two spec files (JSON or YAML)\n  easydocs drift <spec>      Check a committed spec against observed traffic\n  easydocs audit             List sensitive fields detected across the specs\n\nFlags:\n  --project=<slug>           Scope to a project (default: all)\n  --port=<n>                 Port for proxy (default: 3999) or dashboard (default: 4999)\n  --yaml                     Export as YAML instead of JSON\n  --markdown                 Diff/drift/audit: emit Markdown (for PR comments) instead of plain text\n  --prod                     Dashboard: run next start instead of next dev`
     )
     process.exit(1)
 }
@@ -187,6 +191,27 @@ async function runDrift(args: string[]) {
   const markdown = args.includes('--markdown')
   // Drift is an informational signal, never a build gate — always exit 0.
   process.stdout.write(renderDrift(computeDrift(documented, observed), { markdown }) + '\n')
+}
+
+// ─── Audit ────────────────────────────────────────────────────────────────────
+
+// List every field EasyDocs flagged sensitive across the stored specs — the
+// scriptable/CI counterpart to the dashboard's "Sensitive fields" panel.
+async function runAudit(args: string[]) {
+  const projectSlug = getFlag(args, 'project')
+  const db = createDB(process.env.EASYDOCS_DB_URL)
+  const endpoints = projectSlug
+    ? await getEndpointsByProject(db, await findOrCreateProject(db, projectSlug))
+    : await getAllEndpoints(db)
+
+  const items: EndpointAudit[] = endpoints
+    .map((e) => {
+      const spec = e.isManuallyEdited && e.manualSpec ? e.manualSpec : e.spec
+      return { path: e.path, method: e.method, fields: spec ? collectSensitiveFields(spec) : [] }
+    })
+    .sort((a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method))
+
+  process.stdout.write(renderAudit(items, { markdown: args.includes('--markdown') }) + '\n')
 }
 
 // ─── Proxy ────────────────────────────────────────────────────────────────────

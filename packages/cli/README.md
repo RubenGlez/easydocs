@@ -68,15 +68,27 @@ but undocumented**, **documented but never observed**, and values where the docs
 **contradict** what traffic shows. Like `diff`, it's informational and always
 exits 0.
 
+## Audit sensitive fields
+
+`audit` lists every field EasyDocs flagged as sensitive across the stored specs —
+the scriptable/CI counterpart to the dashboard's "Sensitive fields" panel. Useful
+to prove, in a pipeline, exactly what is being protected.
+
+```bash
+npx @easydocs/cli audit                 # all projects
+npx @easydocs/cli audit --project=my-api
+npx @easydocs/cli audit --markdown      # for a PR comment
+```
+
 ## Flags
 
 | Flag | Command | Default | Description |
 |------|---------|---------|-------------|
 | `--port=<n>` | proxy | `3999` | Port for the proxy server |
 | `--port=<n>` | dashboard | `4999` | Port for the dashboard |
-| `--project=<slug>` | proxy, export, drift | `default` | Scope to a project |
+| `--project=<slug>` | proxy, export, drift, audit | `default` | Scope to a project |
 | `--yaml` | export | — | Output YAML instead of JSON |
-| `--markdown` | diff, drift | — | Emit Markdown (for PR comments) |
+| `--markdown` | diff, drift, audit | — | Emit Markdown (for PR comments) |
 | `--prod` | dashboard | — | Run `next start` instead of `next dev` |
 
 ## Environment variables
