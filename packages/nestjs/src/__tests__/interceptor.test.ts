@@ -70,7 +70,7 @@ describe('EasyDocsInterceptor', () => {
     })
   })
 
-  it('uses route path over req.path', () => {
+  it('uses the route template (normalized to OpenAPI {id}) over req.path', () => {
     const capturer = makeCapturer()
     const interceptor = new EasyDocsInterceptor(capturer)
     const ctx = makeContext({ path: '/users/42', routePath: '/users/:id' })
@@ -79,7 +79,26 @@ describe('EasyDocsInterceptor', () => {
     return new Promise<void>((resolve) => {
       interceptor.intercept(ctx as never, handler).subscribe(() => {
         expect(capturer.capture).toHaveBeenCalledWith(
-          expect.objectContaining({ path: '/users/:id' })
+          expect.objectContaining({ path: '/users/{id}' })
+        )
+        resolve()
+      })
+    })
+  })
+
+  it('prepends the router mount prefix (baseUrl) to the route path', () => {
+    const capturer = makeCapturer()
+    const interceptor = new EasyDocsInterceptor(capturer)
+    const ctx = makeContext({ path: '/api/v1/users/42', routePath: '/users/:id' })
+    // makeContext doesn't set baseUrl; inject it directly on the request.
+    const req = (ctx.switchToHttp().getRequest() as Record<string, unknown>)
+    req.baseUrl = '/api/v1'
+    const handler = { handle: () => of({}) }
+
+    return new Promise<void>((resolve) => {
+      interceptor.intercept(ctx as never, handler).subscribe(() => {
+        expect(capturer.capture).toHaveBeenCalledWith(
+          expect.objectContaining({ path: '/api/v1/users/{id}' })
         )
         resolve()
       })

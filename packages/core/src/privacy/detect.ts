@@ -76,6 +76,25 @@ function redactRecord(record: Record<string, string>, ctx: DetectContext): Recor
   return out
 }
 
+// Redact sensitive values embedded in the URL path itself (e.g. a proxy capturing
+// `/verify/<jwt>` or `/users/alice@example.com`, where the segment is a real value
+// rather than a `{param}` template). Template segments are left untouched.
+function redactPath(path: string, ctx: DetectContext): string {
+  return path
+    .split('/')
+    .map((seg) => {
+      if (seg === '' || (seg.startsWith('{') && seg.endsWith('}'))) return seg
+      let decoded = seg
+      try {
+        decoded = decodeURIComponent(seg)
+      } catch {
+        // fall back to the raw segment
+      }
+      return matchesSensitiveValue(decoded, ctx.valuePatterns) ? ctx.placeholder : seg
+    })
+    .join('/')
+}
+
 function redactHeaders(headers: Record<string, string>, ctx: DetectContext): Record<string, string> {
   const out: Record<string, string> = {}
   for (const [k, v] of Object.entries(headers)) {
@@ -113,6 +132,7 @@ export function detect(event: CaptureEvent, config?: PrivacyConfig): DetectResul
 
   const redactedEvent: CaptureEvent = {
     ...event,
+    path: redactPath(event.path, ctx),
     query: redactRecord(event.query, ctx),
     params: redactRecord(event.params, ctx),
     body: redactTree(event.body, ctx),
