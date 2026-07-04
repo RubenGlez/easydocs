@@ -6,6 +6,8 @@
 
 **The API spec you can actually trust — generated on your machine, from real traffic.**
 
+**Project page:** [rubenglez.dev/easydocs](https://rubenglez.dev/easydocs)
+
 EasyDocs generates accurate, up-to-date OpenAPI 3.0 specs from your API's real traffic, running entirely on your machine with nothing sent to anyone. Add one line; no spec files to write, no annotations to maintain. Your docs describe what the API actually does, not what you thought it did when you last touched the YAML. (Under the hood an AI model turns observed requests and responses into the spec — richer than mechanical type-merging — and you stay in control of what ships.)
 
 ## Why EasyDocs
