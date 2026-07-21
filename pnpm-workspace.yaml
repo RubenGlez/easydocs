@@ -15,7 +15,6 @@ overrides:
   hono: ">=4.12.25"
   undici: "^7.28.0"
   form-data: ">=4.0.6"
-  brace-expansion: ^2.1.2
   axios: ^1.18.0
   # onnxruntime-node pins adm-zip ^0.5.16 but the fix for GHSA-xcpc-8h2w-3j85
   # only landed in 0.6.0. Only reached from the private apps/evals tooling.
