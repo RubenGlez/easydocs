@@ -51,8 +51,85 @@ function describeModelError(err: unknown, model: string): string | null {
   )
 }
 
-/** Pull a JSON object out of a model's text reply, tolerating markdown fences and prose. */
-function extractJson(text: string): unknown {
+/**
+ * The brackets still open at the end of `text`, outermost first. Only
+ * structural brackets count; anything inside a string literal is skipped, so a
+ * `}` in a description can't unbalance the count.
+ */
+function unclosedBrackets(text: string): string[] {
+  const open: string[] = []
+  let inString = false
+  let escaped = false
+
+  for (const ch of text) {
+    if (escaped) {
+      escaped = false
+      continue
+    }
+    if (ch === '\\') {
+      escaped = true
+      continue
+    }
+    if (ch === '"') {
+      inString = !inString
+      continue
+    }
+    if (inString) continue
+    if (ch === '{' || ch === '[') open.push(ch)
+    else if (ch === '}' || ch === ']') open.pop()
+  }
+  return open
+}
+
+const closerFor = (c: string) => (c === '{' ? '}' : ']')
+
+/** Append whatever `text` left open, so the result is bracket-balanced. */
+function closeUnbalanced(text: string): string {
+  const open = unclosedBrackets(text)
+  if (open.length === 0) return text
+  return text + open.reverse().map(closerFor).join('')
+}
+
+/**
+ * Offsets of a `,` that directly follows a closing bracket — the boundaries
+ * between sibling members, and the only places a dropped `}` can plausibly
+ * belong. Latest first: the deepest truncation is the most likely one.
+ */
+function memberBoundaries(text: string): number[] {
+  const out: number[] = []
+  for (let i = 1; i < text.length; i++) {
+    if (text[i] !== ',') continue
+    const prev = text[i - 1]
+    if (prev === '}' || prev === ']') out.push(i)
+  }
+  return out.reverse()
+}
+
+const tryParse = (s: string): { ok: boolean; value?: unknown } => {
+  try {
+    return { ok: true, value: JSON.parse(s) }
+  } catch {
+    return { ok: false }
+  }
+}
+
+/**
+ * Every plausible reading of a model reply, cheapest first.
+ *
+ * Smaller models reliably drop a `}` on deeply nested response schemas and then
+ * stop with `finish_reason: "stop"` — they believe they finished, so retrying
+ * reproduces the same mistake. Measured on deepseek-chat this accounted for
+ * *every* failed fixture in the accuracy suite: 4 of 14 endpoints produced
+ * nothing at all, while every reply that did parse scored perfectly.
+ *
+ * The dropped bracket is usually not missing from the end. In the captured
+ * failures the model under-closed just before a trailing top-level key, so
+ * naively appending `}` parses but nests `security` inside `responses` — valid
+ * JSON, wrong document. Rather than guess, this yields each reading and lets
+ * the caller pick the first that satisfies OperationSchema; the schema is the
+ * only reliable arbiter of where the bracket belonged.
+ */
+export function* jsonCandidates(text: string): Generator<unknown> {
   let t = text.trim()
   const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i)
   if (fence) t = fence[1].trim()
@@ -61,7 +138,51 @@ function extractJson(text: string): unknown {
   if (start === -1 || end === -1 || end < start) {
     throw new Error('no JSON object found in model output')
   }
-  return JSON.parse(t.slice(start, end + 1))
+
+  // Bounded at the last `}` so trailing prose is ignored.
+  const exact = tryParse(t.slice(start, end + 1))
+  if (exact.ok) {
+    yield exact.value
+    return
+  }
+
+  // From here on, work to the end of the reply rather than the last `}`: when a
+  // model stops mid-structure that `}` is an *inner* one, and the bounded slice
+  // would silently amputate everything after it.
+  const body = t.slice(start)
+  const open = unclosedBrackets(body)
+  if (open.length === 0) throw new Error(`unparseable model output: ${exact.value ?? 'invalid JSON'}`)
+
+  const closers = [...open].reverse().map(closerFor).join('')
+
+  // (a) the model simply stopped early — close at the end.
+  const atEnd = tryParse(closeUnbalanced(body))
+  if (atEnd.ok) yield atEnd.value
+
+  // (b) it under-closed before a later sibling — close at that boundary instead.
+  //     Capped so a pathological reply can't cost unbounded parse attempts.
+  for (const idx of memberBoundaries(body).slice(0, 8)) {
+    const patched = closeUnbalanced(body.slice(0, idx) + closers + body.slice(idx))
+    const attempt = tryParse(patched)
+    if (attempt.ok) yield attempt.value
+  }
+}
+
+/**
+ * What to tell the model after a rejected attempt. A raw parser message
+ * ("Expected ',' or '}' ... at position 557") is not actionable — in practice
+ * the model made the identical mistake on all three attempts. Name the likely
+ * cause instead.
+ */
+function retryGuidance(lastError: string, wasSyntax: boolean): string {
+  if (wasSyntax) {
+    return (
+      'Your previous reply was not valid JSON. The usual cause is a missing closing "}" or "]" ' +
+      'on a deeply nested schema. Re-emit the entire object and check that every bracket you ' +
+      `open is also closed. Output only the JSON object. Parser said: ${lastError}`
+    )
+  }
+  return `Your previous response did not match the required shape: ${lastError}`
 }
 
 const MAX_ATTEMPTS = 3
@@ -152,11 +273,12 @@ export async function buildOperation(
     .join('\n')
 
   let lastError = ''
+  let lastErrorWasSyntax = false
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const prompt =
       attempt === 1
         ? basePrompt
-        : `${basePrompt}\n\nYour previous response was invalid: ${lastError}\nReturn ONLY a corrected JSON object.`
+        : `${basePrompt}\n\n${retryGuidance(lastError, lastErrorWasSyntax)}\nReturn ONLY a corrected JSON object.`
 
     let text: string
     try {
@@ -175,14 +297,24 @@ export async function buildOperation(
     }
 
     try {
-      const parsed = OperationSchema.safeParse(extractJson(text))
-      if (parsed.success) return finalize(parsed.data, event)
-      lastError = parsed.error.issues
-        .map((i) => `${i.path.join('.')}: ${i.message}`)
-        .join('; ')
-        .slice(0, 300)
+      // Take the first reading of the reply that satisfies the schema. For a
+      // well-formed reply that is the one and only candidate; for a reply with
+      // a dropped bracket the schema decides where it belonged.
+      let schemaError = ''
+      for (const candidate of jsonCandidates(text)) {
+        const parsed = OperationSchema.safeParse(candidate)
+        if (parsed.success) return finalize(parsed.data, event)
+        schemaError ||= parsed.error.issues
+          .map((i) => `${i.path.join('.')}: ${i.message}`)
+          .join('; ')
+          .slice(0, 300)
+      }
+      lastError = schemaError || 'no candidate parse matched the Operation schema'
+      lastErrorWasSyntax = false
     } catch (err) {
+      // Nothing in the reply could be read as JSON at all.
       lastError = (err instanceof Error ? err.message : String(err)).slice(0, 300)
+      lastErrorWasSyntax = true
     }
   }
 
