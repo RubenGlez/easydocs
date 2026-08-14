@@ -5,6 +5,78 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Hono and Next.js App Router lost every request body.** Both read the body
+  after the route handler had already consumed it, which throws — so `requestBody`
+  was silently documented as `null` on every POST/PUT/PATCH. Hono now reads through
+  its own body cache; Next.js clones the request before invoking the handler.
+- **Streaming responses hung the request.** The Hono, Next.js, and Elysia adapters
+  awaited `.json()` on a clone of the response before returning it; on an open SSE
+  stream that never resolves, so the client received nothing. All three now check
+  the response content type first, and non-JSON responses no longer create an
+  endpoint row.
+- **Offline mode and the no-API-key fallback never worked.** The Ollama provider
+  was built with the AI SDK's default OpenAI model, which targets `/v1/responses`;
+  Ollama (and most OpenAI-compatible gateways) only implement
+  `/v1/chat/completions`, so every generation failed.
+- **The failure circuit breaker never reopened.** Five consecutive generation
+  failures disabled capture for the lifetime of the process, so a transient
+  provider outage silently stopped all documentation until the next deploy. It now
+  retries after a 60s cooldown.
+- **NestJS never documented error responses.** The interceptor used `tap()`, which
+  only fires on success, so every response produced by an exception filter went
+  unrecorded. Errors are now captured with the exception's own status and body.
+- **Next.js Pages Router documented one endpoint per dynamic id.** Route params
+  were not separated from the query string, so `/api/users/1` and `/api/users/2`
+  became separate rows, each costing its own AI call.
+- Concurrent writes (cluster mode, multiple replicas) no longer collide on the
+  unique endpoint index after the AI call has already been paid for; project and
+  endpoint writes are now atomic upserts.
+- `capture()` can no longer throw into the host app's response path, and
+  self-referential bodies terminate instead of overflowing the stack.
+- The dashboard no longer opens a new database client and re-runs the schema DDL
+  on every request to three of its API routes.
+- `--port` now rejects non-numeric and out-of-range values instead of silently
+  binding a random port.
+
+### Changed
+- **Capture is bounded by default.** `capture.maxBodySize` now defaults to 256 KB.
+  Previously there was no cap unless configured, so a stalled provider could let
+  the pending-capture queue retain unbounded payloads in the host app's heap.
+- Repeated payload shapes are now dropped synchronously, before entering the
+  queue, so steady-state traffic neither retains bodies nor queues behind an
+  in-flight generation. The queue also processes endpoints in parallel (still one
+  shape at a time per endpoint).
+- An endpoint stops regenerating once 50 distinct payload shapes are documented.
+  The previous FIFO eviction meant highly variable payloads regenerated forever.
+- `spec_versions` is capped at the 50 most recent snapshots per endpoint.
+- Request bodies are trimmed like responses before being sent to the model, so a
+  bulk payload is no longer billed in full.
+- Default models updated to current, non-retired ones (`claude-sonnet-5`,
+  `gpt-5.4-mini-2026-03-17`). A rejected model ID now produces an explicit
+  "pin `ai.model`" error rather than an opaque provider 404. Pin `ai.model`
+  yourself for stability.
+- Capturers expose `flush()`, and adapters drain the queue on shutdown where the
+  framework provides a hook (Fastify `onClose`, Elysia `onStop`, NestJS
+  `onApplicationShutdown`). Elsewhere the returned middleware carries `.flush()`.
+
+### Performance
+- The `maxBodySize` check no longer serializes the whole payload; it stops as soon
+  as the limit is exceeded (~2ms → microseconds on a 1 MB body).
+- Privacy rules (allowlist, key names, custom regexes) are compiled once per
+  config instead of on every captured request.
+- The Express adapter sends the response before doing capture work.
+
+### Breaking
+- The Postgres helpers (`createPgDB`, `pgGetAll`, `pgGetAllProjects`,
+  `pgGetEndpointsByProject`, `pgDeleteById`, `pgSaveManualSpec`) moved from the
+  package root to `@easydocs/core/storage/postgres`. The root re-export pulled the
+  `postgres` driver into every SQLite install; it is now loaded on demand and
+  declared as an optional peer dependency, so Postgres users must install
+  `postgres` themselves. Configuring `storage.type: 'postgres'` is unchanged.
+
 ## [0.9.0] - 2026-07-03
 
 ### Added

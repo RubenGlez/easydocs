@@ -14,14 +14,9 @@ export {
   saveManualSpec,
   resolveConflict,
 } from './storage/sqlite.js'
-export {
-  createPgDB,
-  pgGetAll,
-  pgGetEndpointsByProject,
-  pgGetAllProjects,
-  pgDeleteById,
-  pgSaveManualSpec,
-} from './storage/postgres.js'
+// The Postgres helpers deliberately are NOT re-exported here: a static
+// re-export pulls the `postgres` driver into every SQLite install. Import them
+// from '@easydocs/core/storage/postgres' instead.
 export { buildOperation } from './spec/builder.js'
 export { buildFullSpec } from './spec/assemble.js'
 export { diffSpecs, renderDiff, isEmptyDiff, classifyDiff, shouldFail, renderClassifiedDiff } from './spec/diff.js'

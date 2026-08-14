@@ -48,21 +48,29 @@ function isFlagged(key: string, value: unknown, ctx: DetectContext): boolean {
   return false
 }
 
-function redactTree(value: unknown, ctx: DetectContext): unknown {
-  if (Array.isArray(value)) return value.map((v) => redactTree(v, ctx))
+// Bodies reach us as live objects, not JSON text, so a self-referential value
+// (a Mongoose doc, an entity with a back-reference) would recurse forever here.
+function redactTree(value: unknown, ctx: DetectContext, seen = new Set<object>()): unknown {
   if (value && typeof value === 'object') {
-    const out: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      if (ctx.allow.has(normalizeKey(k))) {
-        out[k] = v
-      } else if (isFlagged(k, v, ctx)) {
-        ctx.sensitivePaths.add(k)
-        out[k] = redactValue(v, ctx.placeholder)
-      } else {
-        out[k] = redactTree(v, ctx)
+    if (seen.has(value)) return '[Circular]'
+    seen.add(value)
+    try {
+      if (Array.isArray(value)) return value.map((v) => redactTree(v, ctx, seen))
+      const out: Record<string, unknown> = {}
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+        if (ctx.allow.has(normalizeKey(k))) {
+          out[k] = v
+        } else if (isFlagged(k, v, ctx)) {
+          ctx.sensitivePaths.add(k)
+          out[k] = redactValue(v, ctx.placeholder)
+        } else {
+          out[k] = redactTree(v, ctx, seen)
+        }
       }
+      return out
+    } finally {
+      seen.delete(value)
     }
-    return out
   }
   return value
 }
@@ -120,19 +128,47 @@ function redactHeaders(headers: Record<string, string>, ctx: DetectContext): Rec
   return out
 }
 
+// The allowlist, key-name set, and compiled custom patterns depend only on the
+// config, which never changes for a given capturer — so build them once per
+// distinct config instead of recompiling every regex on every captured request.
+type CompiledRules = Pick<DetectContext, 'placeholder' | 'allow' | 'keyNames' | 'valuePatterns'>
+const rulesCache = new WeakMap<PrivacyConfig, CompiledRules>()
+let defaultRules: CompiledRules | undefined
+
+function compileRules(config?: PrivacyConfig): CompiledRules {
+  if (!config) {
+    defaultRules ??= {
+      placeholder: DEFAULT_PLACEHOLDER,
+      allow: new Set<string>(),
+      keyNames: new Set(SENSITIVE_KEY_NAMES),
+      valuePatterns: [],
+    }
+    return defaultRules
+  }
+
+  const cached = rulesCache.get(config)
+  if (cached) return cached
+
+  const compiled: CompiledRules = {
+    placeholder: config.placeholder ?? DEFAULT_PLACEHOLDER,
+    allow: new Set((config.allowlist ?? []).map(normalizeKey)),
+    keyNames: new Set([
+      ...SENSITIVE_KEY_NAMES,
+      ...(config.customRules?.keyNames ?? []).map(normalizeKey),
+    ]),
+    valuePatterns: (config.customRules?.valuePatterns ?? []).map((p) => new RegExp(p)),
+  }
+  rulesCache.set(config, compiled)
+  return compiled
+}
+
 /**
  * Scan a CaptureEvent for sensitive fields. Returns a redacted clone (safe to send
  * to a hosted Provider) and the set of flagged key names. Pure and offline.
  */
 export function detect(event: CaptureEvent, config?: PrivacyConfig): DetectResult {
   const ctx: DetectContext = {
-    placeholder: config?.placeholder ?? DEFAULT_PLACEHOLDER,
-    allow: new Set((config?.allowlist ?? []).map(normalizeKey)),
-    keyNames: new Set([
-      ...SENSITIVE_KEY_NAMES,
-      ...(config?.customRules?.keyNames ?? []).map(normalizeKey),
-    ]),
-    valuePatterns: (config?.customRules?.valuePatterns ?? []).map((p) => new RegExp(p)),
+    ...compileRules(config),
     sensitivePaths: new Set<string>(),
   }
 

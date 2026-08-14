@@ -4,6 +4,7 @@ export default defineConfig({
   entry: {
     index: 'src/index.ts',
     'storage/schema': 'src/storage/schema.ts',
+    'storage/postgres': 'src/storage/postgres.ts',
     'spec/schema': 'src/spec/schema.ts',
     'spec/diff': 'src/spec/diff.ts',
     'spec/drift': 'src/spec/drift.ts',

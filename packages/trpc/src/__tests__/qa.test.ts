@@ -4,7 +4,7 @@ import { easydocs } from '../index.js'
 
 vi.mock(import('@easydocs/core'), async (importOriginal) => {
   const actual = await importOriginal()
-  return { ...actual, createCapturer: vi.fn(() => ({ capture: vi.fn() })) }
+  return { ...actual, createCapturer: vi.fn(() => ({ capture: vi.fn(), flush: vi.fn(async () => {}) })) }
 })
 
 const { createCapturer } = await import('@easydocs/core')

@@ -43,6 +43,19 @@ function getFlag(args: string[], name: string): string | undefined {
   return entry?.split('=').slice(1).join('=')
 }
 
+// `parseInt('abc')` is NaN and `server.listen(NaN)` silently binds a random
+// port, so a typo'd --port left the user hunting for their server.
+function getPort(args: string[], fallback: number): number {
+  const raw = getFlag(args, 'port')
+  if (raw === undefined) return fallback
+  const port = Number(raw)
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    console.error(`[EasyDocs] Invalid --port value: ${raw} (expected an integer between 1 and 65535)`)
+    process.exit(2)
+  }
+  return port
+}
+
 // Read commands resolve a project slug without creating it — a typo should
 // report an unknown project (exit 2), not silently insert a junk project row.
 async function resolveReadProject(
@@ -88,7 +101,7 @@ function findDashboardDir(): string | null {
 }
 
 async function runDashboard(args: string[]) {
-  const port = parseInt(getFlag(args, 'port') ?? '4999', 10)
+  const port = getPort(args, 4999)
   const prod = args.includes('--prod')
 
   const dashboardDir = findDashboardDir()
@@ -272,7 +285,7 @@ function stripHopByHop(headers: Record<string, unknown>): Record<string, string>
 }
 
 async function runProxy(args: string[]) {
-  const port = parseInt(getFlag(args, 'port') ?? '3999', 10)
+  const port = getPort(args, 3999)
   const projectSlug = getFlag(args, 'project') ?? 'default'
   const capturer = createCapturer(parseConfig({ project: projectSlug }))
 

@@ -1,5 +1,5 @@
 import { generateText } from 'ai'
-import { resolveModel } from '../ai/provider.js'
+import { resolveModel, resolveProvider, DEFAULT_MODELS } from '../ai/provider.js'
 import { OperationSchema } from './schema.js'
 import type { Operation } from './schema.js'
 import { detectAuthSchemes, VALID_SCHEME_NAMES } from './auth.js'
@@ -22,14 +22,33 @@ export function deriveTag(path: string): string {
   return 'default'
 }
 
-function trimResponse(response: unknown, maxItems = 1): unknown {
-  if (Array.isArray(response)) return response.slice(0, maxItems)
-  if (response && typeof response === 'object') {
+/**
+ * Collapse arrays to a single element before sending a payload to the model.
+ * The schema is derived from element *shape*, so the remaining items are pure
+ * token cost — a 500-item bulk insert used to be billed in full because only
+ * the response was trimmed, never the request body.
+ */
+function trimPayload(payload: unknown, maxItems = 1): unknown {
+  if (Array.isArray(payload)) return payload.slice(0, maxItems).map((v) => trimPayload(v, maxItems))
+  if (payload && typeof payload === 'object') {
     return Object.fromEntries(
-      Object.entries(response as Record<string, unknown>).map(([k, v]) => [k, trimResponse(v)])
+      Object.entries(payload as Record<string, unknown>).map(([k, v]) => [k, trimPayload(v, maxItems)])
     )
   }
-  return response
+  return payload
+}
+
+// A retired or misspelled model ID is the single most likely cause of every
+// generation failing at once, and providers report it as an opaque 404/400.
+// Say what to do instead of surfacing the raw provider error.
+function describeModelError(err: unknown, model: string): string | null {
+  const message = err instanceof Error ? err.message : String(err)
+  if (!/model|not_found|404|does not exist|deprecated|decommission/i.test(message)) return null
+  return (
+    `[EasyDocs] The AI provider rejected model "${model}". It may have been retired. ` +
+    'Set an explicit { ai: { model: "..." } } in your EasyDocs config. ' +
+    `Provider said: ${message}`
+  )
 }
 
 /** Pull a JSON object out of a model's text reply, tolerating markdown fences and prose. */
@@ -55,8 +74,10 @@ export async function buildOperation(
   offline?: boolean
 ): Promise<Operation> {
   const model = resolveModel(aiConfig, offline)
+  const modelId = aiConfig?.model ?? DEFAULT_MODELS[resolveProvider(aiConfig, offline)]
   const timeoutMs = aiConfig?.timeoutMs ?? DEFAULT_TIMEOUT_MS
-  const trimmedResponse = trimResponse(event.response)
+  const trimmedResponse = trimPayload(event.response)
+  const trimmedBody = trimPayload(event.body)
   const detectedAuth = detectAuthSchemes(event.requestHeaders, event.query)
 
   const authGuideline =
@@ -121,7 +142,7 @@ export async function buildOperation(
     `Path: ${event.path}`,
     `Query params: ${JSON.stringify(event.query)}`,
     `Path params: ${JSON.stringify(event.params)}`,
-    `Request body: ${event.body ? JSON.stringify(event.body) : 'none'}`,
+    `Request body: ${event.body ? JSON.stringify(trimmedBody) : 'none'}`,
     `Response status: ${event.status}`,
     `Response body: ${JSON.stringify(trimmedResponse)}`,
     detectedAuth.length > 0 ? `Detected auth: ${detectedAuth.join(', ')}` : '',
@@ -137,14 +158,21 @@ export async function buildOperation(
         ? basePrompt
         : `${basePrompt}\n\nYour previous response was invalid: ${lastError}\nReturn ONLY a corrected JSON object.`
 
-    const { text } = await generateText({
-      model,
-      system,
-      prompt,
-      // Bound each attempt so a provider that hangs (no response, no error)
-      // can't block the single-worker capture queue indefinitely.
-      abortSignal: AbortSignal.timeout(timeoutMs),
-    })
+    let text: string
+    try {
+      ;({ text } = await generateText({
+        model,
+        system,
+        prompt,
+        // Bound each attempt so a provider that hangs (no response, no error)
+        // can't stall the capture queue indefinitely.
+        abortSignal: AbortSignal.timeout(timeoutMs),
+      }))
+    } catch (err) {
+      // The hint already embeds the provider's own message, so nothing is lost.
+      const hint = describeModelError(err, modelId)
+      throw hint ? new Error(hint) : err
+    }
 
     try {
       const parsed = OperationSchema.safeParse(extractJson(text))

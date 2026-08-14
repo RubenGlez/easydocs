@@ -17,10 +17,10 @@ declare module 'h3' {
   }
 }
 
-export function easydocs(config?: EasyDocsConfig): EventHandler {
+export function easydocs(config?: EasyDocsConfig): EventHandler & { flush(): Promise<void> } {
   const parsedConfig = parseConfig(config)
   const capturer = createCapturer(parsedConfig)
-  return defineEventHandler({
+  const handler = defineEventHandler({
     onRequest(event: H3Event) {
       event.context._easydocsStart = Date.now()
     },
@@ -56,4 +56,9 @@ export function easydocs(config?: EasyDocsConfig): EventHandler {
 
     handler: () => {},
   })
+
+  // h3/Nitro has no shutdown hook here, so expose flush on the handler:
+  // `await handler.flush()` from your own SIGTERM handler keeps a deploy from
+  // discarding specs that were still generating.
+  return Object.assign(handler, { flush: () => capturer.flush() })
 }

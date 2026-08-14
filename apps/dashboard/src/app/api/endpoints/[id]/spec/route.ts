@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createDB, saveManualSpec, resolveConflict } from '@easydocs/core'
+import { saveManualSpec, resolveConflict } from '@easydocs/core'
+import { getDb } from '@/lib/db'
 import type { Operation } from '@easydocs/core'
-
-function getDb() {
-  return createDB(process.env.EASYDOCS_DB_URL)
-}
 
 // Save a manual spec edit
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

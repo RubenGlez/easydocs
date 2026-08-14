@@ -11,6 +11,28 @@ docs portal — no multi-tenant hosting, custom domains, theming, or a published
 ReadMe/Mintlify/Scalar). Keep dashboard work serving the developer producing
 the spec, not the external API consumer.
 
+## Capture pipeline invariants
+
+These are load-bearing and easy to undo by accident:
+
+- `capture()` runs **synchronously inside the host app's response path**. It must
+  never throw and must stay cheap — anything expensive belongs in the queue. Only
+  bounded, early-exit work is acceptable there (that is why `size.ts` exists
+  instead of `JSON.stringify().length`).
+- Bodies arrive as **live objects, not JSON text**, so anything that walks them
+  needs cycle protection. `JSON.stringify` throwing is not a safety net.
+- Framework adapters must not consume a request or response body the handler also
+  owns. Cloning a `Request`/`Response` after it has been read throws, and awaiting
+  `.json()` on a stream never resolves — check the content type first, and clone
+  before the handler runs, not after.
+- The `ollama` provider must use `client.chat(model)`. The AI SDK's default
+  OpenAI model targets `/v1/responses`, which Ollama and most OpenAI-compatible
+  gateways do not implement.
+- Default model IDs in `ai/provider.ts` get reviewed every release. Providers
+  retire IDs, which breaks every user who never pinned `ai.model`.
+- Postgres is an **optional peer dependency**, loaded via dynamic import so
+  SQLite installs never pay for it. Don't re-export it from the package root.
+
 ## Release
 
 Run `pnpm release` (or `release:minor` / `release:major`). The script

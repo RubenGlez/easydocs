@@ -144,11 +144,37 @@ own API.
 ## How it works
 
 1. Middleware (or proxy) intercepts every request and response
-2. A background queue feeds the captured data to an AI model — nothing blocks your request
-3. The AI generates or updates an OpenAPI 3.0 Operation object for that endpoint
-4. Response-shape hashing skips re-processing when the structure hasn't changed
+2. Payload-shape hashing drops the capture immediately when that shape is already
+   documented, so steady-state traffic never reaches the queue at all
+3. A background queue feeds genuinely new shapes to an AI model — nothing blocks
+   your request; endpoints are processed in parallel, one shape at a time each
+4. The AI generates or updates an OpenAPI 3.0 Operation object for that endpoint
 5. Specs are stored in SQLite (default) or Postgres
 6. The dashboard reads from that database and renders live docs
+
+Captures are bounded so documentation can never destabilise your app: bodies over
+`capture.maxBodySize` (256 KB by default) are skipped, non-JSON responses
+(streaming, HTML) are ignored, repeated generation failures pause capture for a
+minute before retrying, and an endpoint stops regenerating once 50 distinct
+payload shapes have been documented.
+
+### Graceful shutdown
+
+Spec generation is asynchronous, so a redeploy can discard work still in the
+queue. Adapters with a shutdown hook drain it for you: Fastify via `onClose`,
+Elysia via `onStop`, and NestJS via `onApplicationShutdown` (this one needs
+`app.enableShutdownHooks()`). Elsewhere, call `flush()` on the value the adapter
+returned:
+
+```ts
+const docs = easydocs({ project: "my-api" });
+app.use(docs);
+
+process.on("SIGTERM", async () => {
+  await docs.flush();
+  process.exit(0);
+});
+```
 
 ---
 
@@ -197,16 +223,17 @@ easydocs({
   project: "my-api", // separate spec per service, default: 'default'
   ai: {
     provider: "openai", // 'openai' | 'anthropic' | 'ollama' | 'deepseek'
-    model: "gpt-4o",
+    model: "gpt-5.4-mini-2026-03-17", // pin this; provider defaults move as models retire
     apiKey: "...", // optional, falls back to env vars
   },
   storage: {
-    type: "sqlite", // 'sqlite' | 'postgres'
+    type: "sqlite", // 'sqlite' | 'postgres' — for postgres, also `npm i postgres`
     url: "file:./docs.sqlite",
   },
   capture: {
     ignoreRoutes: ["/health", "/metrics"],
     includePaths: ["/api"],
+    maxBodySize: 262144, // skip bodies over ~256 KB (the default)
   },
   privacy: {
     enabled: true, // on by default; detect & redact PII/secrets

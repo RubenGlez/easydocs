@@ -39,6 +39,12 @@ const plugin: FastifyPluginAsync<EasyDocsConfig> = async (fastify, rawConfig) =>
   fastify.addHook('onRequest', async (request: FastifyRequest) => {
     ;(request as unknown as { easydocsStart: number }).easydocsStart = Date.now()
   })
+
+  // Drain queued spec generation on shutdown so a deploy doesn't discard specs
+  // that were still being generated.
+  fastify.addHook('onClose', async () => {
+    await capturer.flush()
+  })
 }
 
 export const easydocs = fp(plugin, {

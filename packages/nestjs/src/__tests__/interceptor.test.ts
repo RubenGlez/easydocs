@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
-import { of } from 'rxjs'
+import { of, throwError } from 'rxjs'
 import { EasyDocsInterceptor } from '../interceptor.js'
 import type { Capturer, CaptureEvent } from '@easydocs/core'
 
 function makeCapturer() {
   const capture = vi.fn<(event: CaptureEvent) => void>()
-  return { capture } satisfies Capturer
+  return { capture, flush: async () => {} } satisfies Capturer
 }
 
 function makeContext(overrides: {
@@ -101,6 +101,55 @@ describe('EasyDocsInterceptor', () => {
           expect.objectContaining({ path: '/api/v1/users/{id}' })
         )
         resolve()
+      })
+    })
+  })
+
+  // tap() only fires on success, so every response produced by an exception
+  // filter (401, 404, 422, 500 …) used to go undocumented.
+  it('captures HttpException responses, using the exception status and body', () => {
+    const capturer = makeCapturer()
+    const interceptor = new EasyDocsInterceptor(capturer)
+    const ctx = makeContext({ method: 'GET', path: '/users/9', routePath: '/users/:id' })
+
+    class NotFound extends Error {
+      getStatus() { return 404 }
+      getResponse() { return { statusCode: 404, message: 'User not found' } }
+    }
+    const handler = { handle: () => throwError(() => new NotFound()) }
+
+    return new Promise<void>((resolve) => {
+      interceptor.intercept(ctx as never, handler).subscribe({
+        error: (err) => {
+          // The exception must still propagate to Nest's exception filters.
+          expect(err).toBeInstanceOf(NotFound)
+          expect(capturer.capture).toHaveBeenCalledWith(
+            expect.objectContaining({
+              path: '/users/{id}',
+              status: 404,
+              response: { statusCode: 404, message: 'User not found' },
+            })
+          )
+          resolve()
+        },
+      })
+    })
+  })
+
+  it('captures a plain Error as a 500', () => {
+    const capturer = makeCapturer()
+    const interceptor = new EasyDocsInterceptor(capturer)
+    const ctx = makeContext({ path: '/boom', routePath: '/boom' })
+    const handler = { handle: () => throwError(() => new Error('kaboom')) }
+
+    return new Promise<void>((resolve) => {
+      interceptor.intercept(ctx as never, handler).subscribe({
+        error: () => {
+          expect(capturer.capture).toHaveBeenCalledWith(
+            expect.objectContaining({ status: 500, response: { message: 'kaboom' } })
+          )
+          resolve()
+        },
       })
     })
   })
