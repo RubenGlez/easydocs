@@ -5,6 +5,32 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Recover specs from models that drop a closing bracket.** Smaller models
+  reliably under-close deeply nested response schemas and then stop with
+  `finish_reason: "stop"`, so all three generation attempts reproduced the same
+  truncation and the endpoint was documented as nothing at all. Measured on
+  `deepseek-chat`, this was the cause of *every* failing accuracy fixture: 4 of
+  14 endpoints produced no spec, while every reply that did parse scored
+  perfectly. The reply is now re-read with the missing brackets restored, and
+  the candidate readings are validated against the Operation schema so the
+  bracket is placed where it actually belonged — closing at the end also parses,
+  but silently nests `security` inside `responses`.
+
+  Accuracy for `deepseek-chat` on the eval suite goes from 0.714–0.929
+  (straddling the 0.85 gate) to 0.951–0.964, with zero generation failures.
+
+### Changed
+- Retry guidance after a malformed reply names the likely cause instead of
+  echoing the parser ("Expected ',' or '}' ... at position 557"), which models
+  ignored — in practice all three attempts repeated the identical mistake.
+- The CI accuracy gate now prints why each imperfect fixture lost points. It
+  previously reported only a mean, which cannot distinguish "the spec was
+  slightly wrong" from "generation threw and scored a hard zero" — they need
+  opposite fixes, and the second hid this provider bug for weeks.
+
 ## [0.10.0] - 2026-08-14
 
 ### Fixed

@@ -144,11 +144,18 @@ if (GATE) {
       continue
     }
     process.stdout.write(`gating ${label(c)} (${fixtures.length} fixtures)...\n`)
-    const { mean, worst } = await runModel(c)
+    const { mean, worst, results } = await runModel(c)
     tested.push({ c, mean })
     console.log(
       `  ${label(c).padEnd(40)} mean=${mean.toFixed(3)}  worst ${worst.rel.replace('fixtures/', '')} (${worst.score.toFixed(2)})`
     )
+    // Print why each imperfect fixture lost points. Without this the gate
+    // reports a bare mean, which cannot distinguish "the spec was slightly
+    // wrong" from "generation threw and scored a hard 0" — they need opposite
+    // fixes, and the second one hid a real provider bug for weeks.
+    for (const r of results.filter((r) => r.score < 1)) {
+      console.log(`     ${r.rel.replace('fixtures/', '').padEnd(34)} ${r.score.toFixed(2)}  ${r.reason}`)
+    }
   }
 
   if (tested.length === 0) {
