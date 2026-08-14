@@ -5,7 +5,7 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.10.0] - 2026-08-14
 
 ### Fixed
 - **Hono and Next.js App Router lost every request body.** Both read the body
@@ -68,6 +68,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Privacy rules (allowlist, key names, custom regexes) are compiled once per
   config instead of on every captured request.
 - The Express adapter sends the response before doing capture work.
+
+### Security
+- Patched two high-severity advisories: js-yaml quadratic CPU consumption in
+  `!!omap` resolution (GHSA-5p4m-2wfm-xmqj, `>=4.3.1`) and nanoid custom
+  generators looping indefinitely on zero size (GHSA-2v37-7h3g-55p8,
+  `>=3.3.18`). js-yaml is a direct dependency of `@easydocs/cli` and
+  `@easydocs/dashboard`, so the bump is user-facing.
 
 ### Breaking
 - The Postgres helpers (`createPgDB`, `pgGetAll`, `pgGetAllProjects`,
