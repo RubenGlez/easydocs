@@ -1,10 +1,10 @@
 {
   "name": "@easydocs/dashboard",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "engines": {
     "node": ">=24"
   },
-  "description": "EasyDocs dashboard \u2014 browse and export OpenAPI specs generated from your API's real traffic.",
+  "description": "EasyDocs dashboard — browse and export OpenAPI specs generated from your API's real traffic.",
   "files": [
     "src",
     "public",

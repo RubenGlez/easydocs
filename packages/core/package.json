@@ -1,6 +1,6 @@
 {
   "name": "@easydocs/core",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "engines": {
     "node": ">=24"
   },
@@ -8,7 +8,7 @@
     "dist",
     "README.md"
   ],
-  "description": "Core engine for EasyDocs \u2014 generates OpenAPI specs from real API traffic. Local-first, self-hostable, open source.",
+  "description": "Core engine for EasyDocs — generates OpenAPI specs from real API traffic. Local-first, self-hostable, open source.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
