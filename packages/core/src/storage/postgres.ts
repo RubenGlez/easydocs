@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgresJs from 'postgres'
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, notInArray } from 'drizzle-orm'
 import { pgTable, uuid, text, jsonb, timestamp, boolean } from 'drizzle-orm/pg-core'
 import { specsEqual } from './versions.js'
 import type { Operation } from '../spec/schema.js'
@@ -70,6 +70,12 @@ const INIT_SQL = `
 
   CREATE INDEX IF NOT EXISTS spec_versions_endpoint
     ON spec_versions (endpoint_id, created_at);
+
+  -- Also created inline above for fresh databases; declared separately so
+  -- databases created before it exists gain it too. ON CONFLICT in
+  -- pgUpsertEndpoint needs a unique index on exactly these columns.
+  CREATE UNIQUE INDEX IF NOT EXISTS endpoints_path_method_project
+    ON endpoints (path, method, project_id);
 `
 
 export type PgDB = ReturnType<typeof createPgDB>
@@ -111,11 +117,18 @@ export async function pgFindOrCreateProject(db: PgDB, slug: string): Promise<str
 
   if (existing) return existing.id
 
+  // Concurrent replicas can both miss the select; let the loser re-read instead
+  // of throwing on the unique constraint.
   const result = await db
     .insert(pgProjects)
     .values({ name: slug, slug })
+    .onConflictDoNothing({ target: pgProjects.slug })
     .returning({ id: pgProjects.id })
-  return result[0].id
+  if (result[0]) return result[0].id
+
+  const winner = await pgFindProject(db, slug)
+  if (!winner) throw new Error(`[EasyDocs] Could not resolve project "${slug}" after insert conflict`)
+  return winner
 }
 
 /** Resolve a project slug to its id WITHOUT creating it. For read paths. */
@@ -135,8 +148,26 @@ export async function pgGetAllProjects(db: PgDB) {
 
 // ─── Endpoints ───────────────────────────────────────────────────────────────
 
+// Mirrors the SQLite adapter: bound the per-endpoint history so spec_versions
+// doesn't grow without limit and the dashboard's version list stays small.
+const MAX_VERSIONS_PER_ENDPOINT = 50
+
 async function pgRecordVersion(db: PgDB, endpointId: string, spec: Operation, source: 'ai' | 'manual') {
   await db.insert(pgSpecVersions).values({ endpointId, spec, source })
+
+  const keep = await db
+    .select({ id: pgSpecVersions.id })
+    .from(pgSpecVersions)
+    .where(eq(pgSpecVersions.endpointId, endpointId))
+    .orderBy(desc(pgSpecVersions.createdAt))
+    .limit(MAX_VERSIONS_PER_ENDPOINT)
+  if (keep.length < MAX_VERSIONS_PER_ENDPOINT) return
+  await db.delete(pgSpecVersions).where(
+    and(
+      eq(pgSpecVersions.endpointId, endpointId),
+      notInArray(pgSpecVersions.id, keep.map((k) => k.id))
+    )
+  )
 }
 
 async function pgHasVersions(db: PgDB, endpointId: string) {
@@ -180,28 +211,30 @@ export async function pgUpsertEndpoint(
 
   const hasConflict = !!(existing?.isManuallyEdited && existing.manualSpec)
 
-  if (existing) {
-    await db
-      .update(pgEndpoints)
-      .set({ spec, responseHash, hasConflict, updatedAt: new Date() })
-      .where(eq(pgEndpoints.id, existing.id))
-    if (!specsEqual(spec, existing.spec)) {
-      // Endpoints created before version history have no versions; backfill the
-      // prior spec as a baseline so this first change has something to diff against.
-      if (existing.spec && !(await pgHasVersions(db, existing.id))) {
-        await pgRecordVersion(db, existing.id, existing.spec, 'ai')
-      }
-      await pgRecordVersion(db, existing.id, spec, 'ai')
-    }
-    return existing.id
-  }
-
+  // Atomic insert-or-update: with several app replicas writing to one Postgres,
+  // select-then-insert collides on the unique index and throws after the LLM
+  // call has already been paid for.
   const result = await db
     .insert(pgEndpoints)
     .values({ projectId, path, method, spec, responseHash })
+    .onConflictDoUpdate({
+      target: [pgEndpoints.path, pgEndpoints.method, pgEndpoints.projectId],
+      set: { spec, responseHash, hasConflict, updatedAt: new Date() },
+    })
     .returning({ id: pgEndpoints.id })
-  await pgRecordVersion(db, result[0].id, spec, 'ai')
-  return result[0].id
+  const id = result[0].id
+
+  if (!existing) {
+    await pgRecordVersion(db, id, spec, 'ai')
+  } else if (!specsEqual(spec, existing.spec)) {
+    // Endpoints created before version history have no versions; backfill the
+    // prior spec as a baseline so this first change has something to diff against.
+    if (existing.spec && !(await pgHasVersions(db, id))) {
+      await pgRecordVersion(db, id, existing.spec, 'ai')
+    }
+    await pgRecordVersion(db, id, spec, 'ai')
+  }
+  return id
 }
 
 export async function pgGetByPathMethod(

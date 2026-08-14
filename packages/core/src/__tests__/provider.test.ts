@@ -32,7 +32,7 @@ describe('resolveModel', () => {
     it('uses openai when provider is openai', () => {
       withEnv(NO_KEYS, () => {
         const model = concrete(resolveModel({ provider: 'openai', apiKey: 'sk-test' }))
-        expect(model.modelId).toBe('gpt-4o')
+        expect(model.modelId).toBe('gpt-5.4-mini-2026-03-17')
         expect(model.provider).toContain('openai')
       })
     })
@@ -40,7 +40,7 @@ describe('resolveModel', () => {
     it('uses anthropic when provider is anthropic', () => {
       withEnv(NO_KEYS, () => {
         const model = concrete(resolveModel({ provider: 'anthropic', apiKey: 'sk-test' }))
-        expect(model.modelId).toBe('claude-3-5-sonnet-20241022')
+        expect(model.modelId).toBe('claude-sonnet-5')
         expect(model.provider).toContain('anthropic')
       })
     })
@@ -143,5 +143,25 @@ describe('resolveModel', () => {
         expect(() => resolveModel({ provider: 'anthropic', apiKey: 'sk-test' }, true)).toThrow(/offline/i)
       })
     })
+  })
+})
+
+describe('ollama transport', () => {
+  // Ollama's OpenAI-compatible API implements /v1/chat/completions but NOT the
+  // newer /v1/responses endpoint that the AI SDK's OpenAI provider defaults to.
+  // Using the default made every offline / no-API-key generation 404.
+  it('uses the chat-completions API, not the responses API', () => {
+    const model = resolveModel({ provider: 'ollama' })
+    expect(model.constructor.name).toBe('OpenAIChatLanguageModel')
+  })
+
+  it('also uses chat-completions in offline mode', () => {
+    const model = resolveModel(undefined, true)
+    expect(model.constructor.name).toBe('OpenAIChatLanguageModel')
+  })
+
+  it('keeps chat-completions when pointed at a custom OpenAI-compatible gateway', () => {
+    const model = resolveModel({ provider: 'ollama', baseUrl: 'http://gateway.internal/v1' })
+    expect(model.constructor.name).toBe('OpenAIChatLanguageModel')
   })
 })

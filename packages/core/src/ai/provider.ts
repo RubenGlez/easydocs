@@ -4,9 +4,14 @@ import { createDeepSeek } from '@ai-sdk/deepseek'
 import type { LanguageModel } from 'ai'
 import type { AIConfig } from '../types.js'
 
-const DEFAULT_MODELS = {
-  openai: 'gpt-4o',
-  anthropic: 'claude-3-5-sonnet-20241022',
+// Defaults are mid-tier models: spec generation is one call per newly-seen
+// payload shape, so the flagship tier is not worth its cost here. Providers
+// retire model IDs, which silently breaks every user who never set `ai.model` —
+// so these get reviewed each release, and `buildOperation` turns an unknown-model
+// error into an explicit "pin ai.model" message rather than a bare 404.
+export const DEFAULT_MODELS = {
+  openai: 'gpt-5.4-mini-2026-03-17',
+  anthropic: 'claude-sonnet-5',
   ollama: 'llama3.2',
   deepseek: 'deepseek-chat',
 }
@@ -79,7 +84,12 @@ export function resolveModel(config?: AIConfig, offline?: boolean): LanguageMode
         baseURL: config?.baseUrl ?? 'http://localhost:11434/v1',
         apiKey: 'ollama',
       })
-      return client(model)
+      // `client(model)` returns a Responses-API model (POST /v1/responses).
+      // Ollama's OpenAI-compatible surface only implements /v1/chat/completions,
+      // as do most OpenAI-compatible gateways — so every generation 404'd,
+      // tripped the circuit breaker, and produced no docs. That silently broke
+      // both the no-API-key fallback and privacy.offline, which are pinned here.
+      return client.chat(model)
     }
     default: {
       const client = createOpenAI({

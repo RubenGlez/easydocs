@@ -16,6 +16,21 @@ function getCapturer(config?: EasyDocsConfig): Capturer {
   return capturer
 }
 
+/** Flush every cached capturer. Call from an instrumentation shutdown hook. */
+export async function flushEasydocs(): Promise<void> {
+  await Promise.all([...capturerCache.values()].map((c) => c.flush()))
+}
+
+// Only `application/json` (and `+json` suffixes) can become a documented schema.
+// The check also guards against streaming routes: awaiting .json() on an open
+// stream never resolves, and the wrapper awaits it before returning the
+// response, so a streamed route would hang for the client.
+const JSON_CONTENT_TYPE = /^application\/([\w.+-]+\+)?json\b/i
+
+function isJson(headers: { get(name: string): string | null }): boolean {
+  return JSON_CONTENT_TYPE.test(headers.get('content-type') ?? '')
+}
+
 // ─── Local structural types (avoid importing from next at build time) ──────────
 
 interface NextURL {
@@ -53,13 +68,28 @@ export function withEasydocs(handler: AppRouterHandler, config?: EasyDocsConfig)
   const capturer = getCapturer(config)
   return async (req, ctx) => {
     const startedAt = Date.now()
+
+    // Clone BEFORE running the handler. App Router handlers read the body with
+    // `await req.json()`, which consumes it — and cloning a consumed Request
+    // throws, so cloning afterwards silently recorded every requestBody as null.
+    let requestClone: { json(): Promise<unknown> } | null = null
+    if (req.method !== 'GET' && req.method !== 'HEAD' && isJson(req.headers)) {
+      try {
+        requestClone = req.clone()
+      } catch {
+        requestClone = null
+      }
+    }
+
     const response = await handler(req, ctx)
 
     let responseBody: unknown = null
-    try {
-      responseBody = await response.clone().json()
-    } catch {
-      // non-JSON response
+    if (isJson(response.headers)) {
+      try {
+        responseBody = await response.clone().json()
+      } catch {
+        // malformed JSON body
+      }
     }
 
     let resolvedParams: Record<string, string> = {}
@@ -69,11 +99,11 @@ export function withEasydocs(handler: AppRouterHandler, config?: EasyDocsConfig)
     }
 
     let requestBody: unknown = null
-    if (req.method !== 'GET' && req.method !== 'HEAD') {
+    if (requestClone) {
       try {
-        requestBody = await req.clone().json()
+        requestBody = await requestClone.json()
       } catch {
-        // non-JSON body
+        // malformed JSON body
       }
     }
 
@@ -100,6 +130,32 @@ export function withEasydocs(handler: AppRouterHandler, config?: EasyDocsConfig)
 
 type PagesHandler = (req: NextApiRequestLike, res: NextApiResponseLike) => void | Promise<void>
 
+/**
+ * Split `req.query` — which merges dynamic route params and the query string —
+ * back into just the route params, by removing everything that came from the
+ * URL's search string. Without this the Pages Router reports concrete paths, so
+ * `/api/users/1` and `/api/users/2` became two endpoint rows (and two LLM calls)
+ * instead of one `/api/users/{id}`.
+ */
+function splitQuery(req: NextApiRequestLike): {
+  params: Record<string, unknown>
+  query: Record<string, unknown>
+} {
+  const search = new URLSearchParams((req.url ?? '').split('?')[1] ?? '')
+  const searchKeys = new Set(search.keys())
+  const params: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(req.query ?? {})) {
+    if (searchKeys.has(key)) continue
+    // Catch-all segments ([...slug]) arrive as arrays and can't match a single
+    // path segment, so they're left alone.
+    if (Array.isArray(value)) continue
+    params[key] = value
+  }
+  // Route params were previously documented as query parameters too, because
+  // req.query carries both.
+  return { params, query: Object.fromEntries(search.entries()) }
+}
+
 export function withEasydocsPagesHandler(
   handler: PagesHandler,
   config?: EasyDocsConfig
@@ -108,13 +164,15 @@ export function withEasydocsPagesHandler(
   return async (req, res) => {
     const startedAt = Date.now()
     const originalJson = res.json.bind(res)
+    const { params, query } = splitQuery(req)
 
     res.json = function (body: unknown) {
       capturer.capture(
         buildCaptureEvent({
           method: req.method ?? 'GET',
           path: req.url?.split('?')[0] ?? '/',
-          query: req.query as Record<string, unknown>,
+          query,
+          params,
           requestBody: req.body,
           responseBody: body,
           status: res.statusCode,

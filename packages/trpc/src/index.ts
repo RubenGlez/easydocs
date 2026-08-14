@@ -68,7 +68,7 @@ export function easydocs(config?: EasyDocsConfig) {
 
   // Typed loosely: tRPC's middleware generics depend on the user's context/meta,
   // which this adapter is deliberately agnostic to.
-  return async function easydocsMiddleware(opts: any): Promise<any> {
+  const middleware = async function easydocsMiddleware(opts: any): Promise<any> {
     // Subscriptions are streaming, not a request/response we can document.
     if (opts.type === 'subscription') return opts.next()
 
@@ -101,4 +101,9 @@ export function easydocs(config?: EasyDocsConfig) {
 
     return result
   }
+
+  // tRPC has no shutdown hook, so expose flush on the middleware itself:
+  // `await mw.flush()` from your own SIGTERM handler keeps a deploy from
+  // discarding specs that were still generating.
+  return Object.assign(middleware, { flush: () => capturer.flush() })
 }

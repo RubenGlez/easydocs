@@ -1,6 +1,6 @@
 import { createClient } from '@libsql/client'
 import { drizzle } from 'drizzle-orm/libsql'
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, notInArray, sql } from 'drizzle-orm'
 import { endpoints, projects, specVersions } from './schema.js'
 import { specsEqual } from './versions.js'
 import type { Operation } from '../spec/schema.js'
@@ -96,9 +96,13 @@ export function dbReady(db: DB): Promise<void> {
 export async function findOrCreateProject(db: DB, slug: string): Promise<string> {
   const existing = await db.select().from(projects).where(eq(projects.slug, slug)).get()
   if (existing) return existing.id
+  // Two workers (cluster mode, multiple replicas) can both miss the select and
+  // then both insert; let the loser fall through to the re-read instead of
+  // throwing on the unique index.
   const id = crypto.randomUUID()
-  await db.insert(projects).values({ id, name: slug, slug })
-  return id
+  await db.insert(projects).values({ id, name: slug, slug }).onConflictDoNothing()
+  const row = await db.select().from(projects).where(eq(projects.slug, slug)).get()
+  return row?.id ?? id
 }
 
 /** Resolve a project slug to its id WITHOUT creating it. For read paths. */
@@ -113,8 +117,27 @@ export async function getAllProjects(db: DB) {
 
 // ─── Endpoints ───────────────────────────────────────────────────────────────
 
+// spec_versions grows on every regeneration and the dashboard loads the whole
+// list, so keep a bounded window of recent snapshots per endpoint.
+const MAX_VERSIONS_PER_ENDPOINT = 50
+
 async function recordVersion(db: DB, endpointId: string, spec: Operation, source: 'ai' | 'manual') {
   await db.insert(specVersions).values({ id: crypto.randomUUID(), endpointId, spec, source })
+
+  const keep = await db
+    .select({ id: specVersions.id })
+    .from(specVersions)
+    .where(eq(specVersions.endpointId, endpointId))
+    .orderBy(desc(specVersions.createdAt), sql`rowid desc`)
+    .limit(MAX_VERSIONS_PER_ENDPOINT)
+    .all()
+  if (keep.length < MAX_VERSIONS_PER_ENDPOINT) return
+  await db.delete(specVersions).where(
+    and(
+      eq(specVersions.endpointId, endpointId),
+      notInArray(specVersions.id, keep.map((k) => k.id))
+    )
+  )
 }
 
 async function hasVersions(db: DB, endpointId: string) {
@@ -160,25 +183,29 @@ export async function upsertEndpoint(
 
   const hasConflict = !!(existing?.isManuallyEdited && existing.manualSpec)
 
-  if (existing) {
-    await db
-      .update(endpoints)
-      .set({ spec, responseHash, hasConflict, updatedAt: new Date() })
-      .where(eq(endpoints.id, existing.id))
-    if (!specsEqual(spec, existing.spec)) {
-      // Endpoints created before version history have no versions; backfill the
-      // prior spec as a baseline so this first change has something to diff against.
-      if (existing.spec && !(await hasVersions(db, existing.id))) {
-        await recordVersion(db, existing.id, existing.spec, 'ai')
-      }
-      await recordVersion(db, existing.id, spec, 'ai')
-    }
-    return existing.id
-  }
+  // One statement rather than select-then-insert/update: concurrent workers
+  // otherwise collide on endpoints_path_method_project and throw *after* the
+  // LLM call has already been paid for.
+  const rows = await db
+    .insert(endpoints)
+    .values({ id: crypto.randomUUID(), projectId, path, method, spec, responseHash })
+    .onConflictDoUpdate({
+      target: [endpoints.path, endpoints.method, endpoints.projectId],
+      set: { spec, responseHash, hasConflict, updatedAt: new Date() },
+    })
+    .returning({ id: endpoints.id })
+  const id = rows[0].id
 
-  const id = crypto.randomUUID()
-  await db.insert(endpoints).values({ id, projectId, path, method, spec, responseHash })
-  await recordVersion(db, id, spec, 'ai')
+  if (!existing) {
+    await recordVersion(db, id, spec, 'ai')
+  } else if (!specsEqual(spec, existing.spec)) {
+    // Endpoints created before version history have no versions; backfill the
+    // prior spec as a baseline so this first change has something to diff against.
+    if (existing.spec && !(await hasVersions(db, id))) {
+      await recordVersion(db, id, existing.spec, 'ai')
+    }
+    await recordVersion(db, id, spec, 'ai')
+  }
   return id
 }
 

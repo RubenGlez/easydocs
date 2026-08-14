@@ -16,7 +16,12 @@ import type { DriftReport } from '@easydocs/core'
 
 let db: ReturnType<typeof createDB> | null = null
 
-function getDb() {
+/**
+ * The single shared DB handle for the dashboard. Every route must use this —
+ * calling `createDB()` per request opens a new libsql client and re-runs the
+ * schema DDL on every page load.
+ */
+export function getDb() {
   if (!db) db = createDB(process.env.EASYDOCS_DB_URL)
   return db
 }

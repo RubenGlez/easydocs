@@ -8,7 +8,7 @@
     "dist",
     "README.md"
   ],
-  "description": "Core engine for EasyDocs — generates OpenAPI specs from real API traffic. Local-first, self-hostable, open source.",
+  "description": "Core engine for EasyDocs \u2014 generates OpenAPI specs from real API traffic. Local-first, self-hostable, open source.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -23,6 +23,11 @@
       "import": "./dist/storage/schema.js",
       "require": "./dist/storage/schema.cjs",
       "types": "./dist/storage/schema.d.ts"
+    },
+    "./storage/postgres": {
+      "import": "./dist/storage/postgres.js",
+      "require": "./dist/storage/postgres.cjs",
+      "types": "./dist/storage/postgres.d.ts"
     },
     "./spec/schema": {
       "import": "./dist/spec/schema.js",
@@ -59,10 +64,10 @@
     "@libsql/client": "^0.17.3",
     "ai": "^6.0.185",
     "drizzle-orm": "^0.45.2",
-    "postgres": "^3.4.5",
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "postgres": "^3.4.5",
     "tsup": "^8.3.0",
     "typescript": "^5",
     "vite": "8.1.0",
@@ -72,5 +77,13 @@
     "type": "git",
     "url": "https://github.com/RubenGlez/easydocs",
     "directory": ""
+  },
+  "peerDependencies": {
+    "postgres": "^3.4.5"
+  },
+  "peerDependenciesMeta": {
+    "postgres": {
+      "optional": true
+    }
   }
 }

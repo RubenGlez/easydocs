@@ -39,6 +39,9 @@ const DashboardConfigSchema = z.object({
 const CaptureConfigSchema = z.object({
   ignoreRoutes: z.array(z.string()).optional(),
   includePaths: z.array(z.string()).optional(),
+  // Bodies larger than this (approximate serialized bytes) are skipped, so a
+  // stalled provider can't let the pending-capture queue retain unbounded
+  // payloads in the host app's heap. Defaults to 256 KB.
   maxBodySize: z.number().int().positive().optional(),
 }).strict()
 
