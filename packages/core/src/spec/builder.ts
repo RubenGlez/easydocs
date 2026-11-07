@@ -209,7 +209,7 @@ export async function buildOperation(
 
   // We generate via plain text + JSON parsing rather than the AI SDK's
   // structured-output mode: OpenAPI schema objects are open-ended JSON Schema
-  // (z.record(z.any())), which strict structured-output APIs (OpenAI strict,
+  // (z.record(z.string(), z.any())), which strict structured-output APIs (OpenAI strict,
   // Anthropic's native structured outputs) reject. Freeform text works on every
   // provider; we validate the result against OperationSchema ourselves and retry.
   const system = [

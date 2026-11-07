@@ -9,22 +9,41 @@ overrides:
   glob: ^10.5.0
   minimatch: 10.2.6
   flatted: ^3.4.2
-  js-yaml: ^4.3.1
+  js-yaml: ^4.3.2
   picomatch: ^2.3.2
   postcss: ^8.5.18
-  # Reached via next > postcss, which pins ^3.3.x — stay on the 3.x line.
   nanoid: ^3.3.18
-  brace-expansion: 5.0.8
-  sharp: 0.35.3
-  vite: ^8.0.16
+  brace-expansion: 5.0.12
+  sharp: 0.35.5
+  vite: ^8.1.6
   ws: ^8.20.1
   hono: ">=4.12.25"
-  undici: "^7.28.0"
+  undici: ^7.30.1
   form-data: ">=4.0.6"
-  axios: ^1.18.0
-  # onnxruntime-node pins adm-zip ^0.5.16 but the fix for GHSA-xcpc-8h2w-3j85
-  # only landed in 0.6.0. Only reached from the private apps/evals tooling.
-  adm-zip: ^0.6.0
+  axios: ^1.20.0
+  adm-zip: ^0.6.1
+  socket.io-parser@>=4.0.0 <4.2.7: ^4.2.7
+  fast-uri@>=3.0.0 <3.1.9: ^3.1.9
+  ip-address@>=10.0.0 <10.7.4: ^10.7.4
+  browserslist@>=4.0.0 <4.28.7: ^4.28.7
+  "@xmldom/xmldom@>=0.9.0 <0.9.12": ~0.9.12
+  next@>=16.0.0 <16.4.1: ^16.4.1
+  elysia@>=1.0.0 <1.4.29: ^1.4.29
+  engine.io@>=6.0.0 <6.6.10: ^6.6.10
+  fastify@>=5.0.0 <5.12.5: ^5.12.5
+  node-forge@>=1.0.0 <1.4.1: ^1.4.1
+  source-map-js@>=1.0.0 <1.2.2: ^1.2.2
+  proxy-addr@>=2.0.0 <2.0.8: ^2.0.8
+  compression@>=1.0.0 <1.8.2: ^1.8.2
+  "@modelcontextprotocol/sdk@>=1.0.0 <1.32.0": ^1.32.0
+  follow-redirects@>=1.0.0 <1.16.2: ^1.16.2
+  zod@<4.6.6: ^4.6.6
+  # basic-ftp 5.x (get-uri, via promptfoo) has no same-major fix. 6.2.6 keeps
+  # Client.access/list/lastMod/downloadTo, which is the surface get-uri uses.
+  basic-ftp@5.3.1: 6.2.6
+  # @azure/identity 4.14.1 is the first 4.x that depends on @azure/msal-node ^7.1.0.
+  "@azure/identity@4.13.1": 4.14.1
+  body-parser@>=2.0.0 <2.4.0: ^2.4.0
 allowBuilds:
   '@nestjs/core': true
   '@playwright/browser-chromium': true
