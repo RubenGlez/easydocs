@@ -5,6 +5,16 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.2] - 2026-11-07
+
+### Security
+- Patched critical and high advisories across the workspace, including `next`
+  (dashboard), `fastify`, `elysia`, `axios`, `undici`, `@modelcontextprotocol/sdk`,
+  `@xmldom/xmldom`, `node-forge` and `fast-uri`.
+- `@easydocs/core` and the dashboard now depend on `zod` 4 (`^4.6.6`), since
+  zod 3 has no patched release for GHSA-mrhx-c7xc-m3w5. Spec schemas use the
+  two-argument `z.record(key, value)` form; generated specs are unchanged.
+
 ## [0.10.1] - 2026-08-14
 
 ### Fixed
