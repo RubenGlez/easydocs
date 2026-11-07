@@ -1,11 +1,11 @@
 import { z } from 'zod'
 
-const SchemaObject = z.record(z.any()).optional()
+const SchemaObject = z.record(z.string(), z.any()).optional()
 
 const MediaTypeSchema = z.object({
   schema: SchemaObject,
   example: z.any().optional(),
-  examples: z.record(z.any()).optional(),
+  examples: z.record(z.string(), z.any()).optional(),
 })
 
 const ParameterSchema = z.object({
@@ -20,8 +20,8 @@ const ParameterSchema = z.object({
 
 const ResponseSchema = z.object({
   description: z.string(),
-  headers: z.record(z.any()).optional(),
-  content: z.record(MediaTypeSchema).optional(),
+  headers: z.record(z.string(), z.any()).optional(),
+  content: z.record(z.string(), MediaTypeSchema).optional(),
 })
 
 export const OperationSchema = z.object({
@@ -34,13 +34,13 @@ export const OperationSchema = z.object({
     .object({
       description: z.string().optional(),
       required: z.boolean().optional(),
-      content: z.record(MediaTypeSchema),
+      content: z.record(z.string(), MediaTypeSchema),
     })
     .nullable()
     .optional(),
-  responses: z.record(ResponseSchema).default({}),
+  responses: z.record(z.string(), ResponseSchema).default({}),
   deprecated: z.boolean().optional(),
-  security: z.array(z.record(z.array(z.string()))).optional(),
+  security: z.array(z.record(z.string(), z.array(z.string()))).optional(),
 })
 
 export type Operation = z.infer<typeof OperationSchema>

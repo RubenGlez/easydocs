@@ -37,7 +37,12 @@ overrides:
   compression@>=1.0.0 <1.8.2: ^1.8.2
   "@modelcontextprotocol/sdk@>=1.0.0 <1.32.0": ^1.32.0
   follow-redirects@>=1.0.0 <1.16.2: ^1.16.2
-  zod@>=4.0.0 <4.6.6: ^4.6.6
+  zod@<4.6.6: ^4.6.6
+  # basic-ftp 5.x (get-uri, via promptfoo) has no same-major fix. 6.2.6 keeps
+  # Client.access/list/lastMod/downloadTo, which is the surface get-uri uses.
+  basic-ftp@5.3.1: 6.2.6
+  # @azure/identity 4.14.1 is the first 4.x that depends on @azure/msal-node ^7.1.0.
+  "@azure/identity@4.13.1": 4.14.1
   body-parser@>=2.0.0 <2.4.0: ^2.4.0
 allowBuilds:
   '@nestjs/core': true
