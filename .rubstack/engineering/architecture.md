@@ -103,7 +103,7 @@ The script bumps all packages to one shared version, commits, tags `vX.Y.Z`, pus
 
 ## Key decisions
 
-See `.harness/adr/` for all Architecture Decision Records.
+See `.rubstack/adr/` for all Architecture Decision Records.
 
 ## Open questions / Future additions
 
