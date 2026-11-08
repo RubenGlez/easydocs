@@ -17,7 +17,7 @@ The dashboard is the local, producer-side cockpit for the generated spec. It is 
 
 - Publishing is local (npm auth on the release machine); the repo is not set up for CI-triggered publish.
 - All packages share one version, even when only one changed.
-- `apps/evals` is `private` and never published; it holds the AI spec-accuracy eval harness. Published results live in `BENCHMARK.md`; regenerating it is a deliberate trust/reputation move (see `.harness/product/strategy.md`).
+- `apps/evals` is `private` and never published; it holds the AI spec-accuracy eval harness. Published results live in `BENCHMARK.md`; regenerating it is a deliberate trust/reputation move (see `.rubstack/product/strategy.md`).
 
 ## CI
 
@@ -30,15 +30,14 @@ Managed by doctier — do not edit between the markers.
 
 Entry points (read these first):
 
-- `.harness/engineering/architecture.md`
-- `.harness/engineering/implementation-plan.md`
-- `.harness/product/product.md`
+- `.rubstack/engineering/architecture.md`
+- `.rubstack/engineering/implementation-plan.md`
+- `.rubstack/product/product.md`
 
 Further docs, by directory:
 
-- `.harness/adr/` (11 docs)
-- `.harness/engineering/` (1 docs)
-- `.harness/engineering/features/` (5 docs)
-- `.harness/product/` (6 docs)
-- `.harness/qa/` (2 docs)
+- `.rubstack/adr/` (11 docs)
+- `.rubstack/engineering/` (1 docs)
+- `.rubstack/product/` (6 docs)
+- `.rubstack/qa/` (2 docs)
 <!-- doctier:end -->
